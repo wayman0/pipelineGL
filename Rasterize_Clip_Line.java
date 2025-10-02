@@ -4,7 +4,7 @@
  * See LICENSE for details.
 */
 
-package renderer.pipeline;
+package renderer.pipelineGL;
 
 import renderer.scene.*;
 import renderer.scene.primitives.LineSegment;

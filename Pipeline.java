@@ -6,14 +6,15 @@
 
 package renderer.pipelineGL;
 
+import java.nio.*;
+
 import renderer.scene.*;
 import renderer.scene.primitives.*;
-import renderer.scene.util.CheckModel;
 import renderer.framebuffer.*;
-import static renderer.pipeline.PipelineLogger.*;
 
-import com.jogamp.opengl.GL4.*;
 import com.jogamp.opengl.*;
+import com.jogamp.opengl.GL4.*;
+import com.jogamp.common.nio.Buffers;
 
 
 /**
@@ -51,12 +52,17 @@ import com.jogamp.opengl.*;
 public final class Pipeline
 {
       private static GL4 gl; 
+
+      private static int[] vao = new int[1]; // the main buffer id that all vertex info gets bound to
+      private static int[] vbo = new int[1]; // the buffer id's for the vertex 
+      private static int vertexVBOID;    // the buffer id for the vertex info 
+      private static int transUniformID;     // the uniform id for the translation info
+
       private static final String[] vertexShaderSourceCode1 = 
       {
          "#version 430 \n", 
-         "layout (location=0) in vec4 vertex \n", 
-         "layout (location=1) in vec4 positionTranslation; \n", 
-         "layout (location=2) in bool cameraPerspective; \n"
+         "layout (location=0) in vec3 vertex; \n", 
+         "uniform vec3 translationVector; \n"
       }; 
 
       private static final String[] vertexShaderSourceCode2 = 
@@ -124,9 +130,71 @@ public final class Pipeline
          gl.glAttachShader(gpuProgramID, fragmentShaderID);
          gl.glLinkProgram(gpuProgramID);
 
+
+         gl.glGenVertexArrays(vao.length, vao, 0); // generate the id for the vao and store it at index 0
+         gl.glBindVertexArray(vao[0]);             // bind the id for the vao, make the 0th vao active 
+
+         gl.glGenBuffers(vbo.length, vbo, 0); // generate the id and store them starting at index 0. 
+         vertexVBOID   = vbo[0]; 
+
+         transUniformID = gl.glGetUniformLocation(gpuProgramID, "translationVector"); // find the id for the translation vector 
+
          for(final Position position : scene.positionList)
          {
             final Model model = position.getModel(); 
+
+            final int numPrimitives = model.primitiveList.size(); 
+            // assume every primitive is a line segment, which requires 2 points which has 3 values, x, y, z
+            final double[] vertexCoords = new double[numPrimitives * 2 * 3]; 
+            int vertexCoordIndex = 0; 
+
+            for(final Primitive prim : model.primitiveList)
+            {
+               if(prim instanceof LineSegment)
+               {
+                  final int vInd0 = prim.vIndexList.get(0); 
+                  final int vInd1 = prim.vIndexList.get(1); 
+                  final Vertex v0 = model.vertexList.get(vInd0); 
+                  final Vertex v1 = model.vertexList.get(vInd1); 
+
+                  vertexCoords[vertexCoordIndex + 0] = v0.x; 
+                  vertexCoords[vertexCoordIndex + 1] = v0.y; 
+                  vertexCoords[vertexCoordIndex + 2] = v0.z;
+
+                  vertexCoordIndex += 3; 
+
+                  vertexCoords[vertexCoordIndex + 0] = v1.x; 
+                  vertexCoords[vertexCoordIndex + 1] = v1.y; 
+                  vertexCoords[vertexCoordIndex + 2] = v1.z;
+
+                  vertexCoordIndex += 3; 
+               }
+            }
+
+            final Vector transVector = position.getTranslation(); 
+            gl.glUniform3d(transUniformID, transVector.x, transVector.y, transVector.z); // copy the translation vector into the uniform
+            
+
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vertexVBOID); // bind the vertex buffer id, make the vertex buffer active 
+            DoubleBuffer vertBuffer = Buffers.newDirectDoubleBuffer(vertexCoords); // make a buffer from the coordinates 
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, vertBuffer.limit() * 4, vertBuffer, gl.GL_STATIC_DRAW); // copy the buffer data 
+            gl.glVertexAttribPointer(0, 3, gl.GL_DOUBLE, false, 0, 0); // say that the vertex buffer is associated with attribute 0
+            gl.glEnableVertexAttribArray(0); // make the vertex variable in the vertex shader active 
+            gl.glDrawArrays(gl.GL_LINES, 0, numPrimitives * 2); // draw the primitive which is a line starting from point 0 to the number of points
+
+
+            /*
+            // this is for if the translation is supposed to be treated as something that should be rendered 
+            // translation sholdn't be rendered so this is wrong 
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, transVBOID); // bind the translation vector id, make that buffer active 
+            final Vector transVector = position.getTranslation(); 
+            final double[] transValues = {transVector.x, transVector.y, transVector.z}; 
+            DoubleBuffer transBuffer = Buffers.newDirectDoubleBuffer(transValues); // make a buffer from the translation
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, transBuffer.limit() * 4, transBuffer, gl.GL_STATIC_DRAW); // copy the buffer data
+            gl.glVertexAttribPointer(1, 3, gl.GL_DOUBLE, false, 0, 0); // say that the translation buffer is associated with attribute 1
+            gl.glEnableVertexAttribArray(1); 
+            */ 
+
          }
 
          //Model2Camera.model2camera(position); 

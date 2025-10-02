@@ -42,9 +42,10 @@ public class Model2Camera
    {
       "vec4 model2Camera() \n", 
       "{ \n",
-      "return positionTranslation + vertex; \n",  
+      "return translationVector + vertex; \n",  
       "} \n"
-   }
+   }; 
+
    /*
    public static Model model2camera(final Position position)
    {
