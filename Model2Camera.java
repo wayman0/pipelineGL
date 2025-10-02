@@ -4,7 +4,7 @@
  * See LICENSE for details.
 */
 
-package renderer.pipeline;
+package renderer.pipelineGL;
 
 import renderer.scene.*;
 
@@ -37,6 +37,15 @@ public class Model2Camera
       @param position  {@link Position} with a {@link Model} and a translation {@link Vector}
       @return a new {@link Model} with {@link Vertex} objects in the camera's coordinate system
    */
+
+   public static String[] model2Camera = 
+   {
+      "vec4 model2Camera() \n", 
+      "{ \n",
+      "return positionTranslation + vertex; \n",  
+      "} \n"
+   }
+   /*
    public static Model model2camera(final Position position)
    {
       final Model model = position.getModel();
@@ -67,4 +76,5 @@ public class Model2Camera
    private Model2Camera() {
       throw new AssertionError();
    }
+   */ 
 }
