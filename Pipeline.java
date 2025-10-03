@@ -213,7 +213,7 @@ public final class Pipeline
 
             // create an int view of the pixel buffer for use with the viewport 
             final IntBuffer pixelIntBuffer = pixelBuffer.asIntBuffer(); 
-            
+
             // copy the pixelBuffer into the framebuffer 
             for(int x = 0; x < vp.getWidthVP(); x += 1)
             {
@@ -222,6 +222,7 @@ public final class Pipeline
                   vp.setPixelVP(x, y, pixelIntBuffer.get());
                }
             }
+            
 
             /*
             // this is for if the translation is supposed to be treated as something that should be rendered 
