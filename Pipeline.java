@@ -6,6 +6,7 @@
 
 package renderer.pipelineGL;
 
+import java.awt.Color;
 import java.nio.*;
 
 import renderer.scene.*;
@@ -14,6 +15,7 @@ import renderer.framebuffer.*;
 
 import com.jogamp.opengl.*;
 import com.jogamp.opengl.GL4.*;
+import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.common.nio.Buffers;
 
 
@@ -51,7 +53,12 @@ import com.jogamp.common.nio.Buffers;
 */
 public final class Pipeline
 {
-      private static GL4 gl; 
+      private static GLCapabilities glCap;             // the capabilities of the gl profile
+      private static GLProfile      glProf;            // the gl profile being used , gl4 
+      private static GL4            gl;                // the gl4 object
+
+      private static GLDrawableFactory       glFact;         // used to create the pbuffer for offscreen rendering
+      private static GLOffscreenAutoDrawable glPixelBuffer;  // the pbuffer for offscreen rendering
 
       private static int[] vao = new int[1]; // the main buffer id that all vertex info gets bound to
       private static int[] vbo = new int[1]; // the buffer id's for the vertex 
@@ -60,7 +67,7 @@ public final class Pipeline
 
       private static final String[] vertexShaderSourceCode1 = 
       {
-         "#version 430 \n", 
+         "#version 450 \n", 
          "layout (location=0) in vec3 vertex; \n", 
          "uniform vec3 translationVector; \n"
       }; 
@@ -70,7 +77,7 @@ public final class Pipeline
          "void main(void) \n", 
          "{ \n", 
          "gl_Position = model2Camera(); \n", 
-         "gl_Position = projection(); \n", 
+         "//gl_Position = projection(); \n", 
          "} \n"
       }; 
 
@@ -84,7 +91,7 @@ public final class Pipeline
 
       private static final String [] fragmentShaderSourceCode = 
       {
-         "#version 430 \n", 
+         "#version 450 \n", 
          "out vec4 color; \n", 
          "void main(void) \n", 
          "{ \n", 
@@ -111,20 +118,39 @@ public final class Pipeline
       */
       public static void render(final Scene scene, final FrameBuffer.Viewport vp)
       {
+         glProf = GLProfile.get("GL4"); 
+         glCap  = new GLCapabilities(glProf); 
+         glCap.setPBuffer(true);              // enable the use of pbuffers 
+         glCap.setDoubleBuffered(false);     
+
+         glFact = GLDrawableFactory.getFactory(glProf);
+         glPixelBuffer = glFact.createOffscreenAutoDrawable(null, glCap, null, vp.getWidthVP(), vp.getHeightVP()); // create the pbuffer to be the vp width x vp height
+         glPixelBuffer.display(); 
+         glPixelBuffer.getContext().makeCurrent(); // make this pbuffer current 
+
+         gl = glPixelBuffer.getGL().getGL4(); // get the gl object associated with the pbuffer 
+
+         final Color vpBGColor = vp.bgColorVP; 
+         gl.glClearColor(vpBGColor.getRed(), vpBGColor.getGreen(), vpBGColor.getBlue(), vpBGColor.getAlpha()); // clear the pbuffer to be the background color 
+         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT);                                          // clear the color buffer and the depth buffer 
+
+
+         // copy all the glsl code into one big array 
          System.arraycopy(vertexShaderSourceCode1,   0, vertexShaderSourceCode, 0,                      vertexShaderSourceCode1.length); 
          System.arraycopy(Model2Camera.model2Camera, 0, vertexShaderSourceCode, verCode1Size,                   Model2Camera.model2Camera.length); 
          System.arraycopy(vertexShaderSourceCode2,   0, vertexShaderSourceCode, verCode1Size + mod2CamSize,     vertexShaderSourceCode2.length); 
 
-         gl = GLContext.getCurrentGL().getGL4(); 
-
+         // create the vertex shader and get its id, set the source code, and compile it 
          final int vertexShaderID = gl.glCreateShader(gl.GL_VERTEX_SHADER); 
          gl.glShaderSource(vertexShaderID, vertexShaderSourceCode.length, vertexShaderSourceCode, null);
          gl.glCompileShader(vertexShaderID);
 
+         // create the fragment shader and get its id, set the source code, and compile it 
          final int fragmentShaderID = gl.glCreateShader(gl.GL_FRAGMENT_SHADER); 
          gl.glShaderSource(fragmentShaderID, fragmentShaderSourceCode.length, fragmentShaderSourceCode, null);
          gl.glCompileShader(fragmentShaderID);
 
+         // create the program and save its id, attach the compiled vertex and fragment shader, and link it all together 
          int gpuProgramID = gl.glCreateProgram(); 
          gl.glAttachShader(gpuProgramID, vertexShaderID); 
          gl.glAttachShader(gpuProgramID, fragmentShaderID);
@@ -173,7 +199,7 @@ public final class Pipeline
 
             final Vector transVector = position.getTranslation(); 
             gl.glUniform3d(transUniformID, transVector.x, transVector.y, transVector.z); // copy the translation vector into the uniform
-            
+
 
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vertexVBOID); // bind the vertex buffer id, make the vertex buffer active 
             DoubleBuffer vertBuffer = Buffers.newDirectDoubleBuffer(vertexCoords); // make a buffer from the coordinates 
@@ -182,6 +208,20 @@ public final class Pipeline
             gl.glEnableVertexAttribArray(0); // make the vertex variable in the vertex shader active 
             gl.glDrawArrays(gl.GL_LINES, 0, numPrimitives * 2); // draw the primitive which is a line starting from point 0 to the number of points
 
+            ByteBuffer pixelBuffer = GLBuffers.newDirectByteBuffer(vp.getWidthVP() * vp.getHeightVP() * 4); // make the buffer to store the gl rendered data 
+            gl.glReadPixels(0, 0, vp.getWidthVP(), vp.getHeightVP(), GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixelBuffer); // read the data starting at x = 0, y = 0, through the width and height into the pixelBuffer 
+
+            // create an int view of the pixel buffer for use with the viewport 
+            final IntBuffer pixelIntBuffer = pixelBuffer.asIntBuffer(); 
+            
+            // copy the pixelBuffer into the framebuffer 
+            for(int x = 0; x < vp.getWidthVP(); x += 1)
+            {
+               for(int y = 0; y < vp.getHeightVP(); y += 1)
+               {
+                  vp.setPixelVP(x, y, pixelIntBuffer.get());
+               }
+            }
 
             /*
             // this is for if the translation is supposed to be treated as something that should be rendered 
