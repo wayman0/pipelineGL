@@ -8,13 +8,14 @@ package renderer.pipelineGL;
 
 import java.awt.Color;
 import java.nio.*;
+import java.util.Arrays;
 
 import renderer.scene.*;
 import renderer.scene.primitives.*;
 import renderer.framebuffer.*;
+import renderer.pipelineGL.PipelineChecker; 
 
 import com.jogamp.opengl.*;
-import com.jogamp.opengl.GLCapabilitiesImmutable;
 import com.jogamp.opengl.GL4.*;
 import com.jogamp.opengl.util.GLBuffers;
 import com.jogamp.common.nio.Buffers;
@@ -77,8 +78,9 @@ public final class Pipeline
       {
          "void main(void) \n", 
          "{ \n", 
-         "gl_Position = model2Camera(); \n", 
-         "//gl_Position = projection(); \n", 
+         //"gl_Position = model2Camera(); \n", 
+         "gl_Position = vec4(model2Camera(), 1); \n",
+         //"gl_Position = projection(); \n", 
          "} \n"
       }; 
 
@@ -124,16 +126,14 @@ public final class Pipeline
          glCap.setPBuffer(true);              // enable the use of pbuffers 
          glCap.setDoubleBuffered(false);     
 
-   System.out.println("CREATED CAP AND PROF"); 
-
          glFact = GLDrawableFactory.getFactory(glProf);
          glPixelBuffer = glFact.createOffscreenAutoDrawable(null, glCap, null, vp.getWidthVP(), vp.getHeightVP()); // create the pbuffer to be the vp width x vp height
          glPixelBuffer.display(); 
          glPixelBuffer.getContext().makeCurrent(); // make this pbuffer current 
 
-   System.out.println("CREATED FACT AND PBUFFER"); 
-
          gl = glPixelBuffer.getGL().getGL4(); // get the gl object associated with the pbuffer 
+
+   PipelineChecker.CheckOpenGLError(gl);
 
          final Color vpBGColor = vp.bgColorVP; 
          gl.glClearColor(vpBGColor.getRed(), vpBGColor.getGreen(), vpBGColor.getBlue(), vpBGColor.getAlpha()); // clear the pbuffer to be the background color 
@@ -146,31 +146,54 @@ public final class Pipeline
          System.arraycopy(Model2Camera.model2Camera, 0, vertexShaderSourceCode, verCode1Size,                   Model2Camera.model2Camera.length); 
          System.arraycopy(vertexShaderSourceCode2,   0, vertexShaderSourceCode, verCode1Size + mod2CamSize,     vertexShaderSourceCode2.length); 
    
-   System.out.println("COPIED THE CODE"); 
+         
+   System.out.println("COPIED THE CODE: \n");
+   System.out.println(Arrays.toString(vertexShaderSourceCode));  
 
          // create the vertex shader and get its id, set the source code, and compile it 
          final int vertexShaderID = gl.glCreateShader(gl.GL_VERTEX_SHADER); 
          gl.glShaderSource(vertexShaderID, vertexShaderSourceCode.length, vertexShaderSourceCode, null);
          gl.glCompileShader(vertexShaderID);
 
-   System.out.println("COMPILED THE VERTEX SHADER CODE"); 
+   System.out.println("COMPILED THE VERTEX SHADER CODE: " + PipelineChecker.shaderCompiled(gl, vertexShaderID)); 
+   //PipelineChecker.CheckOpenGLError(gl); 
+   //System.out.println(PipelineChecker.shaderCompiled(gl, vertexShaderID)); 
+   //if(!PipelineChecker.shaderCompiled(gl, vertexShaderID))
+   //PipelineChecker.printShaderLog(gl, vertexShaderID);
 
+         
          // create the fragment shader and get its id, set the source code, and compile it 
          final int fragmentShaderID = gl.glCreateShader(gl.GL_FRAGMENT_SHADER); 
          gl.glShaderSource(fragmentShaderID, fragmentShaderSourceCode.length, fragmentShaderSourceCode, null);
          gl.glCompileShader(fragmentShaderID);
 
-   System.out.println("COMPILED THE FRAGMENT SHADER CODE"); 
+   System.out.println("COMPILED THE FRAGMENT SHADER CODE: " + PipelineChecker.shaderCompiled(gl, fragmentShaderID)); 
+   //PipelineChecker.CheckOpenGLError(gl); 
+   //System.out.println(PipelineChecker.shaderCompiled(gl, fragmentShaderID)); 
+   //if(!PipelineChecker.shaderCompiled(gl, fragmentShaderID))
+   //PipelineChecker.printShaderLog(gl, fragmentShaderID);
+         
 
          // create the program and save its id, attach the compiled vertex and fragment shader, and link it all together 
          int gpuProgramID = gl.glCreateProgram(); 
    System.out.println("CREATED THE PROGRAM"); 
+   PipelineChecker.CheckOpenGLError(gl); 
+
          gl.glAttachShader(gpuProgramID, vertexShaderID); 
    System.out.println("ADDED VERTEX SHADER"); 
+   PipelineChecker.CheckOpenGLError(gl); 
+
+   
          gl.glAttachShader(gpuProgramID, fragmentShaderID);
    System.out.println("ADDED FRAGMENT SHADER"); 
+   PipelineChecker.CheckOpenGLError(gl); 
+   
+
          gl.glLinkProgram(gpuProgramID);
    System.out.println("LINKED THE PROGRAM"); 
+   PipelineChecker.CheckOpenGLError(gl); 
+   if(!PipelineChecker.programLinked(gl, gpuProgramID))
+         PipelineChecker.printProgramLog(gl, gpuProgramID);
 
          gl.glGenVertexArrays(vao.length, vao, 0); // generate the id for the vao and store it at index 0
          gl.glBindVertexArray(vao[0]);             // bind the id for the vao, make the 0th vao active 
