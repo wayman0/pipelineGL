@@ -79,7 +79,8 @@ public final class Pipeline
          "void main(void) \n", 
          "{ \n", 
          //"gl_Position = model2Camera(); \n", 
-         "gl_Position = vec4(model2Camera(), 1); \n",
+         " \tgl_Position = vec4(vertex, 1); \n",
+         //"gl_Position = vec4(model2Camera(), 1); \n",
          //"gl_Position = projection(); \n", 
          "} \n"
       }; 
@@ -98,7 +99,7 @@ public final class Pipeline
          "out vec4 color; \n", 
          "void main(void) \n", 
          "{ \n", 
-         "color = vec4(1, 1, 1, 1); \n",
+         "\tcolor = vec4(1, 1, 1, 1); \n",
          "} \n"
       }; 
 
@@ -121,8 +122,10 @@ public final class Pipeline
       */
       public static void render(final Scene scene, final FrameBuffer.Viewport vp)
       {
+         
          glProf = GLProfile.get("GL4"); 
          glCap  = new GLCapabilities(glProf); 
+         
          glCap.setPBuffer(true);              // enable the use of pbuffers 
          glCap.setDoubleBuffered(false);     
 
@@ -136,11 +139,14 @@ public final class Pipeline
    PipelineChecker.CheckOpenGLError(gl);
 
          final Color vpBGColor = vp.bgColorVP; 
-         gl.glClearColor(vpBGColor.getRed(), vpBGColor.getGreen(), vpBGColor.getBlue(), vpBGColor.getAlpha()); // clear the pbuffer to be the background color 
+         //gl.glClearColor(vpBGColor.getRed(), vpBGColor.getGreen(), vpBGColor.getBlue(), vpBGColor.getAlpha()); // clear the pbuffer to be the background color 
+         gl.glClearColor(255, 255, 255, 255); // clear the pbuffer to be the background color 
+         
          gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT);                                          // clear the color buffer and the depth buffer 
 
    System.out.println("CLEARED THE PBUFFER"); 
-
+           
+         
          // copy all the glsl code into one big array 
          System.arraycopy(vertexShaderSourceCode1,   0, vertexShaderSourceCode, 0,                      vertexShaderSourceCode1.length); 
          System.arraycopy(Model2Camera.model2Camera, 0, vertexShaderSourceCode, verCode1Size,                   Model2Camera.model2Camera.length); 
@@ -151,15 +157,18 @@ public final class Pipeline
    System.out.println(Arrays.toString(vertexShaderSourceCode));  
 
          // create the vertex shader and get its id, set the source code, and compile it 
-         final int vertexShaderID = gl.glCreateShader(gl.GL_VERTEX_SHADER); 
+         final int vertexShaderID = gl.glCreateShader(GL4.GL_VERTEX_SHADER); 
+
+   System.out.println("Created the Shader and is it a shader: " + gl.glIsShader(vertexShaderID)); 
          gl.glShaderSource(vertexShaderID, vertexShaderSourceCode.length, vertexShaderSourceCode, null);
+         //gl.glShaderSource(vertexShaderID, 3, new String[] {"#version 450\n", "void main(void) \n", "{gl_Position = vec4(0, 0, 0, 1);}\n"}, null, 0);
          gl.glCompileShader(vertexShaderID);
 
    System.out.println("COMPILED THE VERTEX SHADER CODE: " + PipelineChecker.shaderCompiled(gl, vertexShaderID)); 
-   //PipelineChecker.CheckOpenGLError(gl); 
+   PipelineChecker.CheckOpenGLError(gl); 
    //System.out.println(PipelineChecker.shaderCompiled(gl, vertexShaderID)); 
    //if(!PipelineChecker.shaderCompiled(gl, vertexShaderID))
-   //PipelineChecker.printShaderLog(gl, vertexShaderID);
+   PipelineChecker.printShaderLog(gl, vertexShaderID);
 
          
          // create the fragment shader and get its id, set the source code, and compile it 
@@ -168,10 +177,10 @@ public final class Pipeline
          gl.glCompileShader(fragmentShaderID);
 
    System.out.println("COMPILED THE FRAGMENT SHADER CODE: " + PipelineChecker.shaderCompiled(gl, fragmentShaderID)); 
-   //PipelineChecker.CheckOpenGLError(gl); 
+   PipelineChecker.CheckOpenGLError(gl); 
    //System.out.println(PipelineChecker.shaderCompiled(gl, fragmentShaderID)); 
    //if(!PipelineChecker.shaderCompiled(gl, fragmentShaderID))
-   //PipelineChecker.printShaderLog(gl, fragmentShaderID);
+   PipelineChecker.printShaderLog(gl, fragmentShaderID);
          
 
          // create the program and save its id, attach the compiled vertex and fragment shader, and link it all together 

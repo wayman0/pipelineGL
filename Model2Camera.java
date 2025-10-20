@@ -42,7 +42,7 @@ public class Model2Camera
    {
       "vec3 model2Camera() \n", 
       "{ \n",
-      "return translationVector + vertex; \n",  
+      "\treturn translationVector + vertex; \n",  
       "} \n"
    }; 
 
