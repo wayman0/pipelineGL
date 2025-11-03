@@ -52,8 +52,8 @@ public final class PipelineGL
       {
          "void main(void) \n",
          "{ \n",
-         //"gl_Position = model2Camera(); \n",
-         " \tgl_Position = vec4(vertex, 1); \n",
+         "gl_Position = model2Camera(); \n",
+         //" \tgl_Position = vec4(vertex, 1); \n",
          //"gl_Position = vec4(model2Camera(), 1); \n",
          //"gl_Position = projection(); \n",
          "} \n"
@@ -117,7 +117,7 @@ public final class PipelineGL
          gl.glClearColor(vpBGColor.getRed(), vpBGColor.getGreen(), vpBGColor.getBlue(), vpBGColor.getAlpha());
          //gl.glClearColor(255, 255, 255, 255); // clear the pbuffer to be the background color
 
-         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT); // clear the color buffer and the depth buffer
+         gl.glClear(GL4.GL_COLOR_BUFFER_BIT | GL4.GL_DEPTH_BUFFER_BIT); // clear the color buffer and the depth buffer
 
    System.out.println("CLEARED THE PBUFFER");
 
@@ -145,7 +145,7 @@ public final class PipelineGL
    PipelineChecker.printShaderLog(gl, vertexShaderID);
 
          // create the fragment shader and get its id, set the source code, and compile it
-         final int fragmentShaderID = gl.glCreateShader(gl.GL_FRAGMENT_SHADER);
+         final int fragmentShaderID = gl.glCreateShader(GL4.GL_FRAGMENT_SHADER);
          gl.glShaderSource(fragmentShaderID, fragmentShaderSourceCode.length, fragmentShaderSourceCode, null);
          gl.glCompileShader(fragmentShaderID);
 
@@ -232,17 +232,17 @@ public final class PipelineGL
    System.out.println("COPIED THE TRANSLATION UNIFORM");
 
             // bind the vertex buffer id, make the vertex buffer active
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, vertexVBOID);
+            gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, vertexVBOID);
             // make a buffer from the coordinates
             DoubleBuffer vertBuffer = Buffers.newDirectDoubleBuffer(vertexCoords);
             // copy the buffer data
-            gl.glBufferData(gl.GL_ARRAY_BUFFER, vertBuffer.limit() * 4, vertBuffer, gl.GL_STATIC_DRAW);
+            gl.glBufferData(GL4.GL_ARRAY_BUFFER, vertBuffer.limit() * 4, vertBuffer, GL4.GL_STATIC_DRAW);
             // say that the vertex buffer is associated with attribute 0
-            gl.glVertexAttribPointer(0, 3, gl.GL_DOUBLE, false, 0, 0);
+            gl.glVertexAttribPointer(0, 3, GL4.GL_DOUBLE, false, 0, 0);
             // make the vertex variable in the vertex shader active
             gl.glEnableVertexAttribArray(0);
             // draw the primitive which is a line starting from point 0 to the number of points
-            gl.glDrawArrays(gl.GL_LINES, 0, numPrimitives * 2);
+            gl.glDrawArrays(GL4.GL_LINES, 0, numPrimitives * 2);
 
    System.out.println("ENABLED THE VERTEX STUFF AND DREW LINES");
 
@@ -270,12 +270,12 @@ public final class PipelineGL
             /*
             // this is for if the translation is supposed to be treated as something that should be rendered
             // translation sholdn't be rendered so this is wrong
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, transVBOID); // bind the translation vector id, make that buffer active
+            gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, transVBOID); // bind the translation vector id, make that buffer active
             final Vector transVector = position.getTranslation();
             final double[] transValues = {transVector.x, transVector.y, transVector.z};
             DoubleBuffer transBuffer = Buffers.newDirectDoubleBuffer(transValues); // make a buffer from the translation
-            gl.glBufferData(gl.GL_ARRAY_BUFFER, transBuffer.limit() * 4, transBuffer, gl.GL_STATIC_DRAW); // copy the buffer data
-            gl.glVertexAttribPointer(1, 3, gl.GL_DOUBLE, false, 0, 0); // say that the translation buffer is associated with attribute 1
+            gl.glBufferData(GL4.GL_ARRAY_BUFFER, transBuffer.limit() * 4, transBuffer, GL4.GL_STATIC_DRAW); // copy the buffer data
+            gl.glVertexAttribPointer(1, 3, GL4.GL_DOUBLE, false, 0, 0); // say that the translation buffer is associated with attribute 1
             gl.glEnableVertexAttribArray(1);
             */
          }

@@ -83,41 +83,13 @@ public final class Projection
       @param camera  a reference to the {@link Scene}'s {@link Camera} object
       @return a new {@link Model} object holding the projected {@link Vertex} objects
    */
-   public static Model project(final Model model, final Camera camera)
+   public static String[] project = 
    {
-      // A new vertex list to hold the projected vertices.
-      final List<Vertex> newVertexList =
-                            new ArrayList<>(model.vertexList.size());
-
-      // Replace each Vertex object with one that contains
-      // the original Vertex's projected (x,y) coordinates.
-      for (final Vertex v : model.vertexList)
-      {
-         if ( camera.perspective )
-         {
-            // Calculate the perspective projection.
-            newVertexList.add(
-              new Vertex(
-                v.x / -v.z,  // xp = xc / -zc
-                v.y / -v.z,  // yp = yc / -zc
-                -1));        // zp = -1
-         }
-         else
-         {
-            // Calculate the parallel projection.
-            newVertexList.add(
-              new Vertex(
-                v.x,  // xp = xc
-                v.y,  // yp = yc
-                0));  // zp = 0
-         }
-      }
-
-      return new Model(newVertexList,
-                       model.primitiveList,
-                       model.name,
-                       model.visible);
-   }
+      "vec4 project() \n", 
+      "{ \n",
+      "\treturn gl_position/gl_position[3]; \n",  
+      "} \n"
+   };
 
 
 

@@ -40,9 +40,9 @@ public class Model2Camera
 
    public static String[] model2Camera = 
    {
-      "vec3 model2Camera() \n", 
+      "vec4 model2Camera() \n", 
       "{ \n",
-      "\treturn translationVector + vertex; \n",  
+      "\treturn vec4(translationVector + vertex, 1); \n",  
       "} \n"
    }; 
 
