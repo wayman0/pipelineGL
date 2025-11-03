@@ -15,7 +15,7 @@ import java.awt.Color;
 /**
    Methods used by the pipeline stages to log information.
 */
-public class PipelineLogger
+public class PipelineLoggerGL
 {
    public static boolean debugScene = false;
    public static boolean debugPosition = false;
@@ -208,7 +208,7 @@ public class PipelineLogger
 
    // Private default constructor to enforce noninstantiable class.
    // See Item 4 in "Effective Java", 3rd Ed, Joshua Bloch.
-   private PipelineLogger() {
+   private PipelineLoggerGL() {
       throw new AssertionError();
    }
 }
