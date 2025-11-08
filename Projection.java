@@ -85,9 +85,12 @@ public final class Projection
    */
    public static String[] project = 
    {
+      //https://stackoverflow.com/questions/31686664/perspective-divide-why-use-the-w-component
+      //https://stackoverflow.com/questions/17269686/why-do-we-need-perspective-division
       "vec4 project() \n", 
       "{ \n",
-      "\treturn gl_Position/gl_Position.z; \n",  
+      "double z = gl_Position.z;",
+      "\treturn vec4(gl_Position/-z); \n",  
       "} \n"
    };
 

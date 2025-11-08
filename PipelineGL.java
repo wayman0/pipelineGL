@@ -54,7 +54,9 @@ public final class PipelineGL
       {
          "void main(void) \n",
          "{ \n",
-         "gl_Position = model2Camera(); \n",
+         "vec3 tmp = vec3(translationVector + vertex);\n",
+         "gl_Position = vec4(tmp, 1);\n",
+         //"gl_Position = model2Camera(); \n",
          "gl_Position = projection(); \n",
          "} \n"
       };
@@ -123,6 +125,8 @@ public final class PipelineGL
          System.arraycopy(Model2Camera.model2Camera, 0, vertexShaderSourceCode, verCode1Size,                             mod2CamSize);
          System.arraycopy(Projection.project,        0, vertexShaderSourceCode, verCode1Size + mod2CamSize,               projectSize);
          System.arraycopy(vertexShaderSourceCode2,   0, vertexShaderSourceCode, verCode1Size + mod2CamSize + projectSize, verCode2Size);
+
+         System.out.println(Arrays.toString(vertexShaderSourceCode)); 
 
          // create the vertex shader and get its id, set the source code, and compile it
          // https://docs.gl/gl4/glCreateShader
