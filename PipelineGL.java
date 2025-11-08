@@ -13,7 +13,7 @@ import java.util.Arrays;
 import renderer.scene.*;
 import renderer.scene.primitives.*;
 import renderer.framebuffer.*;
-import renderer.pipelineGL.PipelineChecker;
+import renderer.pipelineGL.OpenGLChecker;
 
 import com.jogamp.opengl.*;
 import com.jogamp.opengl.GL4.*;
@@ -45,7 +45,9 @@ public final class PipelineGL
       {
          "#version 450 \n",
          "layout (location=0) in vec3 vertex; \n",
-         "uniform vec3 translationVector; \n"
+         "uniform vec3 translationVector; \n",
+         "vec4 model2Camera(); \n", 
+         "vec4 projection(); \n"
       };
 
       private static final String[] vertexShaderSourceCode2 =
@@ -53,19 +55,19 @@ public final class PipelineGL
          "void main(void) \n",
          "{ \n",
          "gl_Position = model2Camera(); \n",
-         //" \tgl_Position = vec4(vertex, 1); \n",
-         //"gl_Position = vec4(model2Camera(), 1); \n",
-         //"gl_Position = projection(); \n",
+         "gl_Position = projection(); \n",
          "} \n"
       };
 
       private static final int verCode1Size = vertexShaderSourceCode1.length;
       private static final int verCode2Size = vertexShaderSourceCode2.length;
       private static final int mod2CamSize  = Model2Camera.model2Camera.length;
+      private static final int projectSize  = Projection.project.length; 
 
-      private static String[] vertexShaderSourceCode = new String[vertexShaderSourceCode1.length +
-                                                                  Model2Camera.model2Camera.length +
-                                                                  vertexShaderSourceCode2.length];
+      private static String[] vertexShaderSourceCode = new String[verCode1Size +
+                                                                  mod2CamSize +
+                                                                  projectSize +
+                                                                  verCode2Size];
 
       private static final String [] fragmentShaderSourceCode =
       {
@@ -110,86 +112,54 @@ public final class PipelineGL
 
          gl = glPixelBuffer.getGL().getGL4(); // get the gl object associated with the pbuffer
 
-   PipelineChecker.CheckOpenGLError(gl);
-
          final Color vpBGColor = vp.bgColorVP;
          // clear the pbuffer to be the background color
          gl.glClearColor(vpBGColor.getRed(), vpBGColor.getGreen(), vpBGColor.getBlue(), vpBGColor.getAlpha());
-         //gl.glClearColor(255, 255, 255, 255); // clear the pbuffer to be the background color
 
          gl.glClear(GL4.GL_COLOR_BUFFER_BIT | GL4.GL_DEPTH_BUFFER_BIT); // clear the color buffer and the depth buffer
 
-   System.out.println("CLEARED THE PBUFFER");
-
          // copy all the glsl code into one big array
-         System.arraycopy(vertexShaderSourceCode1,   0, vertexShaderSourceCode, 0, vertexShaderSourceCode1.length);
-         System.arraycopy(Model2Camera.model2Camera, 0, vertexShaderSourceCode, verCode1Size, Model2Camera.model2Camera.length);
-         System.arraycopy(vertexShaderSourceCode2,   0, vertexShaderSourceCode, verCode1Size + mod2CamSize,     vertexShaderSourceCode2.length);
-
-   System.out.println("COPIED THE CODE: \n");
-   System.out.println(Arrays.toString(vertexShaderSourceCode));
+         System.arraycopy(vertexShaderSourceCode1,   0, vertexShaderSourceCode,    0,                            verCode1Size);
+         System.arraycopy(Model2Camera.model2Camera, 0, vertexShaderSourceCode, verCode1Size,                             mod2CamSize);
+         System.arraycopy(Projection.project,        0, vertexShaderSourceCode, verCode1Size + mod2CamSize,               projectSize);
+         System.arraycopy(vertexShaderSourceCode2,   0, vertexShaderSourceCode, verCode1Size + mod2CamSize + projectSize, verCode2Size);
 
          // create the vertex shader and get its id, set the source code, and compile it
+         // https://docs.gl/gl4/glCreateShader
          final int vertexShaderID = gl.glCreateShader(GL4.GL_VERTEX_SHADER);
 
-   System.out.println("Created the Shader and is it a shader: " + gl.glIsShader(vertexShaderID));
-
+         //https://docs.gl/gl4/glShaderSource     
+         //https://docs.gl/gl4/glCompileShader 
          gl.glShaderSource(vertexShaderID, vertexShaderSourceCode.length, vertexShaderSourceCode, null);
-         //gl.glShaderSource(vertexShaderID, 3, new String[] {"#version 450\n", "void main(void) \n", "{gl_Position = vec4(0, 0, 0, 1);}\n"}, null, 0);
          gl.glCompileShader(vertexShaderID);
-
-   System.out.println("COMPILED THE VERTEX SHADER CODE: " + PipelineChecker.shaderCompiled(gl, vertexShaderID));
-   PipelineChecker.CheckOpenGLError(gl);
-   //System.out.println(PipelineChecker.shaderCompiled(gl, vertexShaderID));
-   //if(!PipelineChecker.shaderCompiled(gl, vertexShaderID))
-   PipelineChecker.printShaderLog(gl, vertexShaderID);
 
          // create the fragment shader and get its id, set the source code, and compile it
          final int fragmentShaderID = gl.glCreateShader(GL4.GL_FRAGMENT_SHADER);
          gl.glShaderSource(fragmentShaderID, fragmentShaderSourceCode.length, fragmentShaderSourceCode, null);
          gl.glCompileShader(fragmentShaderID);
 
-   System.out.println("COMPILED THE FRAGMENT SHADER CODE: " + PipelineChecker.shaderCompiled(gl, fragmentShaderID));
-   PipelineChecker.CheckOpenGLError(gl);
-   //System.out.println(PipelineChecker.shaderCompiled(gl, fragmentShaderID));
-   //if(!PipelineChecker.shaderCompiled(gl, fragmentShaderID))
-   PipelineChecker.printShaderLog(gl, fragmentShaderID);
-
          // create the program and save its id, attach the compiled vertex and fragment shader, and link it all together
+         //https://docs.gl/gl4/glCreateProgram
          int gpuProgramID = gl.glCreateProgram();
 
-   System.out.println("CREATED THE PROGRAM");
-   PipelineChecker.CheckOpenGLError(gl);
-
+         //https://docs.gl/gl4/glAttachShader
+         //https://docs.gl/gl4/glLinkProgram
          gl.glAttachShader(gpuProgramID, vertexShaderID);
-
-   System.out.println("ADDED VERTEX SHADER");
-   PipelineChecker.CheckOpenGLError(gl);
-
-
          gl.glAttachShader(gpuProgramID, fragmentShaderID);
-
-   System.out.println("ADDED FRAGMENT SHADER");
-   PipelineChecker.CheckOpenGLError(gl);
-
-
          gl.glLinkProgram(gpuProgramID);
 
-   System.out.println("LINKED THE PROGRAM");
-   PipelineChecker.CheckOpenGLError(gl);
-   if(!PipelineChecker.programLinked(gl, gpuProgramID))
 
-         PipelineChecker.printProgramLog(gl, gpuProgramID);
-
+         //https://docs.gl/gl4/glGenVertexArrays
+         //https://docs.gl/gl4/glBindVertexArray
          gl.glGenVertexArrays(vao.length, vao, 0); // generate the id for the vao and store it at index 0
          gl.glBindVertexArray(vao[0]);             // bind the id for the vao, make the 0th vao active
 
+         //https://docs.gl/gl4/glGenBuffers
          gl.glGenBuffers(vbo.length, vbo, 0); // generate the id and store them starting at index 0.
          vertexVBOID   = vbo[0];
 
+         //https://docs.gl/gl4/glGetUniformLocation
          transUniformID = gl.glGetUniformLocation(gpuProgramID, "translationVector"); // find the id for the translation vector
-
-   System.out.println("SET UP VAO VBO AND UNIFORMS");
 
          for(final Position position : scene.positionList)
          {
@@ -223,35 +193,40 @@ public final class PipelineGL
                }
             }
 
-   System.out.println("CREATED THE VERTEX INFO");
-
             final Vector transVector = position.getTranslation();
             // copy the translation vector into the uniform
+            //https://docs.gl/gl4/glUniform
             gl.glUniform3d(transUniformID, transVector.x, transVector.y, transVector.z);
 
-   System.out.println("COPIED THE TRANSLATION UNIFORM");
-
             // bind the vertex buffer id, make the vertex buffer active
+            //https://docs.gl/gl4/glBindBuffer
             gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, vertexVBOID);
+
             // make a buffer from the coordinates
             DoubleBuffer vertBuffer = Buffers.newDirectDoubleBuffer(vertexCoords);
-            // copy the buffer data
-            gl.glBufferData(GL4.GL_ARRAY_BUFFER, vertBuffer.limit() * 4, vertBuffer, GL4.GL_STATIC_DRAW);
-            // say that the vertex buffer is associated with attribute 0
-            gl.glVertexAttribPointer(0, 3, GL4.GL_DOUBLE, false, 0, 0);
-            // make the vertex variable in the vertex shader active
-            gl.glEnableVertexAttribArray(0);
-            // draw the primitive which is a line starting from point 0 to the number of points
-            gl.glDrawArrays(GL4.GL_LINES, 0, numPrimitives * 2);
 
-   System.out.println("ENABLED THE VERTEX STUFF AND DREW LINES");
+            // copy the buffer data
+            //https://docs.gl/gl4/glBufferData
+            gl.glBufferData(GL4.GL_ARRAY_BUFFER, vertBuffer.limit() * 4, vertBuffer, GL4.GL_STATIC_DRAW);
+
+            // say that the vertex buffer is associated with attribute 0, layout = 0 
+            //https://docs.gl/gl4/glVertexAttribPointer
+            gl.glVertexAttribPointer(0, 3, GL4.GL_DOUBLE, false, 0, 0);
+
+            // make the vertex variable in the vertex shader active
+            //https://docs.gl/gl4/glEnableVertexAttribArray
+            gl.glEnableVertexAttribArray(0);
+
+            // draw the primitive which is a line starting from point 0 to the number of points
+            //https://docs.gl/gl4/glDrawArrays
+            gl.glDrawArrays(GL4.GL_LINES, 0, numPrimitives * 2);
 
             // make the buffer to store the gl rendered data
             ByteBuffer pixelBuffer = GLBuffers.newDirectByteBuffer(vp.getWidthVP() * vp.getHeightVP() * 4);
-            // read the data starting at x = 0, y = 0, through the width and height into the pixelBuffer
-            gl.glReadPixels(0, 0, vp.getWidthVP(), vp.getHeightVP(), GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixelBuffer);
 
-   System.out.println("READ THE PIXEL INFO FROM PBUFFER");
+            // read the data starting at x = 0, y = 0, through the width and height into the pixelBuffer
+            //https://docs.gl/gl4/glReadPixels
+            gl.glReadPixels(0, 0, vp.getWidthVP(), vp.getHeightVP(), GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixelBuffer);
 
             // create an int view of the pixel buffer for use with the viewport
             final IntBuffer pixelIntBuffer = pixelBuffer.asIntBuffer();
@@ -264,20 +239,6 @@ public final class PipelineGL
                   vp.setPixelVP(x, y, pixelIntBuffer.get());
                }
             }
-
-   System.out.println("COPIED THE PIXEL BUFFER INFO INTO THE FRAMEBUFFER");
-
-            /*
-            // this is for if the translation is supposed to be treated as something that should be rendered
-            // translation sholdn't be rendered so this is wrong
-            gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, transVBOID); // bind the translation vector id, make that buffer active
-            final Vector transVector = position.getTranslation();
-            final double[] transValues = {transVector.x, transVector.y, transVector.z};
-            DoubleBuffer transBuffer = Buffers.newDirectDoubleBuffer(transValues); // make a buffer from the translation
-            gl.glBufferData(GL4.GL_ARRAY_BUFFER, transBuffer.limit() * 4, transBuffer, GL4.GL_STATIC_DRAW); // copy the buffer data
-            gl.glVertexAttribPointer(1, 3, GL4.GL_DOUBLE, false, 0, 0); // say that the translation buffer is associated with attribute 1
-            gl.glEnableVertexAttribArray(1);
-            */
          }
 
          //Model2Camera.model2camera(position);

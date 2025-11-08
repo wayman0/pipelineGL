@@ -87,7 +87,7 @@ public final class Projection
    {
       "vec4 project() \n", 
       "{ \n",
-      "\treturn gl_position/gl_position[3]; \n",  
+      "\treturn gl_Position/gl_Position.z; \n",  
       "} \n"
    };
 
