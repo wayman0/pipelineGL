@@ -37,14 +37,16 @@ public final class PipelineGL
       private static GLOffscreenAutoDrawable glPixelBuffer;  // the pbuffer for offscreen rendering
 
       private static int[] vao = new int[1]; // the main buffer id that all vertex info gets bound to
-      private static int[] vbo = new int[1]; // the buffer id's for the vertex
+      private static int[] vbo = new int[2]; // the buffer id's for the vertex attributes ie data and indexes 
       private static int vertexVBOID;    // the buffer id for the vertex info
+      private static int indexVBOID;     // the buffer id for the index info 
       private static int transUniformID;     // the uniform id for the translation info
 
       private static final String[] vertexShaderSourceCode1 =
       {
          "#version 450 \n",
          "layout (location=0) in vec3 vertex; \n",
+         "layout (location=1) in vec2 indexes; \n",
          "uniform vec3 translationVector; \n",
          "vec4 model2Camera(); \n", 
          "vec4 projection(); \n"
@@ -57,7 +59,7 @@ public final class PipelineGL
          "vec3 tmp = vec3(translationVector + vertex);\n",
          "gl_Position = vec4(tmp, 1);\n",
          //"gl_Position = model2Camera(); \n",
-         "gl_Position = projection(); \n",
+         //"gl_Position = projection(); \n",
          "} \n"
       };
 
@@ -130,10 +132,12 @@ public final class PipelineGL
 
          // create the vertex shader and get its id, set the source code, and compile it
          // https://docs.gl/gl4/glCreateShader
+         //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47
          final int vertexShaderID = gl.glCreateShader(GL4.GL_VERTEX_SHADER);
 
          //https://docs.gl/gl4/glShaderSource     
          //https://docs.gl/gl4/glCompileShader 
+         //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47
          gl.glShaderSource(vertexShaderID, vertexShaderSourceCode.length, vertexShaderSourceCode, null);
          gl.glCompileShader(vertexShaderID);
 
@@ -144,10 +148,12 @@ public final class PipelineGL
 
          // create the program and save its id, attach the compiled vertex and fragment shader, and link it all together
          //https://docs.gl/gl4/glCreateProgram
+         //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47  
          int gpuProgramID = gl.glCreateProgram();
 
          //https://docs.gl/gl4/glAttachShader
          //https://docs.gl/gl4/glLinkProgram
+         //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47
          gl.glAttachShader(gpuProgramID, vertexShaderID);
          gl.glAttachShader(gpuProgramID, fragmentShaderID);
          gl.glLinkProgram(gpuProgramID);
@@ -161,6 +167,7 @@ public final class PipelineGL
          //https://docs.gl/gl4/glGenBuffers
          gl.glGenBuffers(vbo.length, vbo, 0); // generate the id and store them starting at index 0.
          vertexVBOID   = vbo[0];
+         indexVBOID    = vbo[1]; 
 
          //https://docs.gl/gl4/glGetUniformLocation
          transUniformID = gl.glGetUniformLocation(gpuProgramID, "translationVector"); // find the id for the translation vector
@@ -170,10 +177,33 @@ public final class PipelineGL
             final Model model = position.getModel();
 
             final int numPrimitives = model.primitiveList.size();
-            // assume every primitive is a line segment, which requires 2 points which has 3 values, x, y, z
-            final double[] vertexCoords = new double[numPrimitives * 2 * 3];
-            int vertexCoordIndex = 0;
+            // this will need to be fixed later on assuming every primitive is a line segment 
+            final double[] vertexCoords  = new double[numPrimitives * 3];
+            final int[]    vertexIndexes = new int[numPrimitives * 2]; 
 
+            int vertexCoordIndex = 0;
+            for(final Vertex v : model.vertexList)
+            {
+               vertexCoords[vertexCoordIndex + 0] = v.x; 
+               vertexCoords[vertexCoordIndex + 1] = v.y; 
+               vertexCoords[vertexCoordIndex + 2] = v.z; 
+
+               vertexCoordIndex += 3; 
+            }
+
+            int vertexPrimIndex = 0; 
+            for(final Primitive p : model.primitiveList)
+            {
+               if(p instanceof LineSegment)
+               {
+                  vertexIndexes[vertexPrimIndex + 0] = p.vIndexList.get(0); 
+                  vertexIndexes[vertexPrimIndex + 1] = p.vIndexList.get(1);
+                  
+                  vertexPrimIndex += 2; 
+               }
+            }
+
+            /*
             for(final Primitive prim : model.primitiveList)
             {
                if(prim instanceof LineSegment)
@@ -196,22 +226,35 @@ public final class PipelineGL
                   vertexCoordIndex += 3;
                }
             }
-
+            */ 
             final Vector transVector = position.getTranslation();
             // copy the translation vector into the uniform
             //https://docs.gl/gl4/glUniform
             gl.glUniform3d(transUniformID, transVector.x, transVector.y, transVector.z);
 
+            // make a buffer from the coordinates
+            DoubleBuffer vertBuffer = Buffers.newDirectDoubleBuffer(vertexCoords);
+
+            // make a buffer from the indexes 
+            IntBuffer    indBuffer  = Buffers.newDirectIntBuffer(vertexIndexes);
+
             // bind the vertex buffer id, make the vertex buffer active
             //https://docs.gl/gl4/glBindBuffer
             gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, vertexVBOID);
 
-            // make a buffer from the coordinates
-            DoubleBuffer vertBuffer = Buffers.newDirectDoubleBuffer(vertexCoords);
-
-            // copy the buffer data
+            // copy the vertex buffer data
             //https://docs.gl/gl4/glBufferData
-            gl.glBufferData(GL4.GL_ARRAY_BUFFER, vertBuffer.limit() * 4, vertBuffer, GL4.GL_STATIC_DRAW);
+            gl.glBufferData(GL4.GL_ARRAY_BUFFER, vertBuffer.limit() * Buffers.SIZEOF_DOUBLE, vertBuffer, GL4.GL_STATIC_DRAW);
+
+            // bind the index buffer id, make the index buffer active
+            //https://docs.gl/gl4/glBindBuffer
+            //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_8_1_eng_web.html#13
+            gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, indexVBOID);
+
+            // copy the index buffer data
+            //https://docs.gl/gl4/glBufferData
+            //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_8_1_eng_web.html#13
+            gl.glBufferData(GL4.GL_ELEMENT_ARRAY_BUFFER, indBuffer.limit() * Buffers.SIZEOF_INT, indBuffer, GL4.GL_STATIC_DRAW);
 
             // say that the vertex buffer is associated with attribute 0, layout = 0 
             //https://docs.gl/gl4/glVertexAttribPointer
@@ -221,10 +264,20 @@ public final class PipelineGL
             //https://docs.gl/gl4/glEnableVertexAttribArray
             gl.glEnableVertexAttribArray(0);
 
-            // draw the primitive which is a line starting from point 0 to the number of points
-            //https://docs.gl/gl4/glDrawArrays
-            gl.glDrawArrays(GL4.GL_LINES, 0, numPrimitives * 2);
+            // say that the vertex buffer is associated with attribute 1, layout = 1 
+            //https://docs.gl/gl4/glVertexAttribPointer
+            gl.glVertexAttribPointer(1, 2, GL4.GL_INT, false, 0, 0); 
 
+            // make the index variable in the vertex shader active
+            //https://docs.gl/gl4/glEnableVertexAttribArray
+            gl.glEnableVertexAttribArray(1); 
+
+            // draw the line primitives drawarrays doesn't use the element buffer
+            //https://docs.gl/gl4/glDrawArrays
+            //gl.glDrawArrays(GL4.GL_LINES, 0, vertexCoords.length);
+            //https://docs.gl/gl4/glDrawElements
+            gl.glDrawElements(GL4.GL_LINES, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0);
+         
             // make the buffer to store the gl rendered data
             ByteBuffer pixelBuffer = GLBuffers.newDirectByteBuffer(vp.getWidthVP() * vp.getHeightVP() * 4);
 
