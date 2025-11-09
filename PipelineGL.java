@@ -46,6 +46,7 @@ public final class PipelineGL
       {
          "#version 450 \n",
          "layout (location=0) in vec3 vertex; \n",
+         "varying vec4 transVertex; \n",
          "uniform vec3 translationVector; \n",
          "vec4 model2Camera(); \n", 
          "vec4 projection(); \n"
@@ -57,6 +58,7 @@ public final class PipelineGL
          "{ \n",
          //"vec3 tmp = vec3(translationVector + vertex);\n",
          //"gl_Position = vec4(tmp, 1);\n",
+         "transVertex = vec4(vertex, 1);\n",
          "gl_Position = vec4(vertex, 1);\n",
          //"vec4 mod2Cam = model2Camera(); \n",
          //"gl_Position = projection(mod2Cam); \n",
@@ -150,6 +152,9 @@ public final class PipelineGL
          //https://docs.gl/gl4/glCreateProgram
          //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47  
          int gpuProgramID = gl.glCreateProgram();
+
+      String[] vertexShaderOutputVariableName = {"transVertex"}; 
+      gl.glTransformFeedbackVaryings(gpuProgramID, 1, vertexShaderOutputVariableName, GL4.GL_SEPARATE_ATTRIBS);
 
          //https://docs.gl/gl4/glAttachShader
          //https://docs.gl/gl4/glLinkProgram
@@ -266,12 +271,29 @@ public final class PipelineGL
             //https://docs.gl/gl4/glEnableVertexAttribArray
             gl.glEnableVertexAttribArray(0);
 
+         DoubleBuffer vertBufferOut = Buffers.newDirectDoubleBuffer(vertBuffer.limit()/3 * 4);
+         int[] transformedVertexVBOID = new int[1]; 
+         gl.glGenBuffers(1, transformedVertexVBOID, 0);
+         gl.glBindBuffer(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, transformedVertexVBOID[0]); 
+         gl.glBufferData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, vertBuffer.limit() * Buffers.SIZEOF_DOUBLE, vertBufferOut, GL4.GL_STATIC_COPY);
+         gl.glBindBufferBase(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, transformedVertexVBOID[0]); 
+
+         gl.glEnable(GL4.GL_RASTERIZER_DISCARD); // Disable rasterization
+         gl.glBeginTransformFeedback(GL4.GL_LINES);
+
             // draw the line primitives drawarrays doesn't use the element buffer
             //https://docs.gl/gl4/glDrawArrays
             //gl.glDrawArrays(GL4.GL_LINES, 0, vertexCoords.length);
             //https://docs.gl/gl4/glDrawElements
             gl.glDrawElements(GL4.GL_LINES, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0);
          
+         gl.glEndTransformFeedback();
+         gl.glDisable(GL4.GL_RASTERIZER_DISCARD);
+
+         for(int i = 0; i < vertBufferOut.limit(); i += 4)
+            System.out.println(vertBufferOut.get(i+0) + ", " + vertBufferOut.get(i+1) + ", " + vertBufferOut.get(i+2) + ", " + vertBufferOut.get(i+3));   
+
+
             // make the buffer to store the gl rendered data
             ByteBuffer pixelBuffer = GLBuffers.newDirectByteBuffer(vp.getWidthVP() * vp.getHeightVP() * 4);
 
