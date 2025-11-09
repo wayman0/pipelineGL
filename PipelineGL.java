@@ -56,8 +56,9 @@ public final class PipelineGL
       {
          "void main(void) \n",
          "{ \n",
-         "vec3 tmp = vec3(translationVector + vertex);\n",
-         "gl_Position = vec4(tmp, 1);\n",
+         //"vec3 tmp = vec3(translationVector + vertex);\n",
+         //"gl_Position = vec4(tmp, 1);\n",
+         "gl_Position = vec4(vertex, 1);\n",
          //"gl_Position = model2Camera(); \n",
          //"gl_Position = projection(); \n",
          "} \n"
@@ -175,11 +176,13 @@ public final class PipelineGL
          for(final Position position : scene.positionList)
          {
             final Model model = position.getModel();
+            
+            final int      numVertexes  = model.vertexList.size();
+            final double[] vertexCoords = new double[numVertexes * 3];
 
-            final int numPrimitives = model.primitiveList.size();
             // this will need to be fixed later on assuming every primitive is a line segment 
-            final double[] vertexCoords  = new double[numPrimitives * 3];
-            final int[]    vertexIndexes = new int[numPrimitives * 2]; 
+            final int   numPrimitives = model.primitiveList.size();
+            final int[] vertexIndexes = new int[numPrimitives * 2]; 
 
             int vertexCoordIndex = 0;
             for(final Vertex v : model.vertexList)
@@ -237,6 +240,12 @@ public final class PipelineGL
 
             // make a buffer from the indexes 
             IntBuffer    indBuffer  = Buffers.newDirectIntBuffer(vertexIndexes);
+
+      for(int i = 0; i < vertBuffer.limit(); i += 3)
+         System.out.println(vertBuffer.get(i+0) + ", " + vertBuffer.get(i+1) + ", " + vertBuffer.get(i+2)); 
+
+      for(int i = 0; i < indBuffer.limit(); i += 2)
+         System.out.println(indBuffer.get(i+0) + ", " + indBuffer.get(i+1)); 
 
             // bind the vertex buffer id, make the vertex buffer active
             //https://docs.gl/gl4/glBindBuffer
