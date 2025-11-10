@@ -46,7 +46,6 @@ public final class PipelineGL
       {
          "#version 450 \n",
          "layout (location=0) in vec3 vertex; \n",
-         "layout (location=1) in vec2 indexes; \n",
          "uniform vec3 translationVector; \n",
          "vec4 model2Camera(); \n", 
          "vec4 projection(); \n"
@@ -56,11 +55,11 @@ public final class PipelineGL
       {
          "void main(void) \n",
          "{ \n",
-         //"vec3 tmp = vec3(translationVector + vertex);\n",
-         //"gl_Position = vec4(tmp, 1);\n",
-         "gl_Position = vec4(vertex, 1);\n",
+         "vec3 tmp = vec3(translationVector + vertex);\n",
+         "gl_Position = vec4(tmp, 1);\n",
+         //"gl_Position = vec4(vertex, 1);\n",
          //"gl_Position = model2Camera(); \n",
-         //"gl_Position = projection(); \n",
+         "gl_Position = projection(); \n",
          "} \n"
       };
 
@@ -238,14 +237,11 @@ public final class PipelineGL
             // make a buffer from the coordinates
             DoubleBuffer vertBuffer = Buffers.newDirectDoubleBuffer(vertexCoords);
 
-            // make a buffer from the indexes 
-            IntBuffer    indBuffer  = Buffers.newDirectIntBuffer(vertexIndexes);
+      //for(int i = 0; i < vertBuffer.limit(); i += 3)
+      //   System.out.println(vertBuffer.get(i+0) + ", " + vertBuffer.get(i+1) + ", " + vertBuffer.get(i+2)); 
 
-      for(int i = 0; i < vertBuffer.limit(); i += 3)
-         System.out.println(vertBuffer.get(i+0) + ", " + vertBuffer.get(i+1) + ", " + vertBuffer.get(i+2)); 
-
-      for(int i = 0; i < indBuffer.limit(); i += 2)
-         System.out.println(indBuffer.get(i+0) + ", " + indBuffer.get(i+1)); 
+      //for(int i = 0; i < indBuffer.limit(); i += 2)
+      //   System.out.println(indBuffer.get(i+0) + ", " + indBuffer.get(i+1)); 
 
             // bind the vertex buffer id, make the vertex buffer active
             //https://docs.gl/gl4/glBindBuffer
@@ -254,6 +250,9 @@ public final class PipelineGL
             // copy the vertex buffer data
             //https://docs.gl/gl4/glBufferData
             gl.glBufferData(GL4.GL_ARRAY_BUFFER, vertBuffer.limit() * Buffers.SIZEOF_DOUBLE, vertBuffer, GL4.GL_STATIC_DRAW);
+
+            // make a buffer from the indexes 
+            IntBuffer    indBuffer  = Buffers.newDirectIntBuffer(vertexIndexes);
 
             // bind the index buffer id, make the index buffer active
             //https://docs.gl/gl4/glBindBuffer
@@ -272,14 +271,6 @@ public final class PipelineGL
             // make the vertex variable in the vertex shader active
             //https://docs.gl/gl4/glEnableVertexAttribArray
             gl.glEnableVertexAttribArray(0);
-
-            // say that the vertex buffer is associated with attribute 1, layout = 1 
-            //https://docs.gl/gl4/glVertexAttribPointer
-            gl.glVertexAttribPointer(1, 2, GL4.GL_INT, false, 0, 0); 
-
-            // make the index variable in the vertex shader active
-            //https://docs.gl/gl4/glEnableVertexAttribArray
-            gl.glEnableVertexAttribArray(1); 
 
             // draw the line primitives drawarrays doesn't use the element buffer
             //https://docs.gl/gl4/glDrawArrays
