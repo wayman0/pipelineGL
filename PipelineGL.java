@@ -307,8 +307,8 @@ public final class PipelineGL
          FloatBuffer feedback = Buffers.newDirectFloatBuffer(feedbackArr);
          gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_DOUBLE, feedback);
 
-         for(int i = 0; i < feedback.limit(); i += 1)
-            System.out.println(String.format("%f", feedback.get(i)));
+         for(int i = 0; i < feedback.limit(); i += 4)
+            System.out.println(feedback.get(i+0) + ", " + feedback.get(i+1) + ", " + feedback.get(i+2) + ", " + feedback.get(i+3));
          /*
          DoubleBuffer vertBufferOut = Buffers.newDirectDoubleBuffer(vertBuffer.limit()* 4);
          int[] transformedVertexVBOID = new int[1]; 
