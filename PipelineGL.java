@@ -107,74 +107,10 @@ public final class PipelineGL
       */
       public static void render(final Scene scene, final FrameBuffer.Viewport vp)
       {
+         createOpenGLFramebuffer(vp);
 
-         glProf = GLProfile.get("GL4");
-         glCap  = new GLCapabilities(glProf);
-
-         glCap.setPBuffer(true);              // enable the use of pbuffers
-         glCap.setDoubleBuffered(false);
-
-         glFact = GLDrawableFactory.getFactory(glProf);
-         glPixelBuffer = glFact.createOffscreenAutoDrawable(null, glCap, null, vp.getWidthVP(), vp.getHeightVP()); // create the pbuffer to be the vp width x vp height
-         glPixelBuffer.display();
-         glPixelBuffer.getContext().makeCurrent(); // make this pbuffer current
-
-         gl = glPixelBuffer.getGL().getGL4(); // get the gl object associated with the pbuffer
-
-         final Color vpBGColor = vp.bgColorVP;
-         // clear the pbuffer to be the background color
-         gl.glClearColor(vpBGColor.getRed(), vpBGColor.getGreen(), vpBGColor.getBlue(), vpBGColor.getAlpha());
-
-         gl.glClear(GL4.GL_COLOR_BUFFER_BIT | GL4.GL_DEPTH_BUFFER_BIT); // clear the color buffer and the depth buffer
-
-         // copy all the glsl code into one big array
-         System.arraycopy(vertexShaderSourceCode1,   0, vertexShaderSourceCode,    0,                            verCode1Size);
-         System.arraycopy(Model2Camera.model2Camera, 0, vertexShaderSourceCode, verCode1Size,                             mod2CamSize);
-         System.arraycopy(Projection.project,        0, vertexShaderSourceCode, verCode1Size + mod2CamSize,               projectSize);
-         System.arraycopy(vertexShaderSourceCode2,   0, vertexShaderSourceCode, verCode1Size + mod2CamSize + projectSize, verCode2Size);
-
-         System.out.println(Arrays.toString(vertexShaderSourceCode)); 
-
-         // create the vertex shader and get its id, set the source code, and compile it
-         // https://docs.gl/gl4/glCreateShader
-         //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47
-         final int vertexShaderID = gl.glCreateShader(GL4.GL_VERTEX_SHADER);
-
-         //https://docs.gl/gl4/glShaderSource     
-         //https://docs.gl/gl4/glCompileShader 
-         //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47
-         gl.glShaderSource(vertexShaderID, vertexShaderSourceCode.length, vertexShaderSourceCode, null);
-         gl.glCompileShader(vertexShaderID);
-      OpenGLChecker.CheckOpenGLError(gl); 
-
-         // create the fragment shader and get its id, set the source code, and compile it
-         final int fragmentShaderID = gl.glCreateShader(GL4.GL_FRAGMENT_SHADER);
-         gl.glShaderSource(fragmentShaderID, fragmentShaderSourceCode.length, fragmentShaderSourceCode, null);
-         gl.glCompileShader(fragmentShaderID);
-      OpenGLChecker.CheckOpenGLError(gl);
-
-         // create the program and save its id, attach the compiled vertex and fragment shader, and link it all together
-         //https://docs.gl/gl4/glCreateProgram
-         //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47  
-         int gpuProgramID = gl.glCreateProgram();
-
-         //https://docs.gl/gl4/glAttachShader
-         gl.glAttachShader(gpuProgramID, vertexShaderID);
-         gl.glAttachShader(gpuProgramID, fragmentShaderID);
+         int gpuProgramID = createOpenGLShaders();
          
-      //https://docs.gl/gl4/glTransformFeedbackVaryings
-      String[] vertexShaderOutputVariableName = {"transVertex"}; 
-      gl.glTransformFeedbackVaryings(gpuProgramID, vertexShaderOutputVariableName.length, 
-                                     vertexShaderOutputVariableName, GL4.GL_INTERLEAVED_ATTRIBS);
-
-         //https://docs.gl/gl4/glLinkProgram
-         //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47
-         gl.glLinkProgram(gpuProgramID);
-         gl.glUseProgram(gpuProgramID);
-      System.out.println(OpenGLChecker.shaderCompiled(gl, vertexShaderID));
-      System.out.println(OpenGLChecker.shaderCompiled(gl, fragmentShaderID));
-      OpenGLChecker.printProgramLog(gl, gpuProgramID);
-
          //https://docs.gl/gl4/glGenVertexArrays
          //https://docs.gl/gl4/glBindVertexArray
          gl.glGenVertexArrays(vao.length, vao, 0); // generate the id for the vao and store it at index 0
@@ -225,35 +161,11 @@ public final class PipelineGL
                }
             }
 
-            /*
-            for(final Primitive prim : model.primitiveList)
-            {
-               if(prim instanceof LineSegment)
-               {
-                  final int vInd0 = prim.vIndexList.get(0);
-                  final int vInd1 = prim.vIndexList.get(1);
-                  final Vertex v0 = model.vertexList.get(vInd0);
-                  final Vertex v1 = model.vertexList.get(vInd1);
-
-                  vertexCoords[vertexCoordIndex + 0] = v0.x;
-                  vertexCoords[vertexCoordIndex + 1] = v0.y;
-                  vertexCoords[vertexCoordIndex + 2] = v0.z;
-
-                  vertexCoordIndex += 3;
-
-                  vertexCoords[vertexCoordIndex + 0] = v1.x;
-                  vertexCoords[vertexCoordIndex + 1] = v1.y;
-                  vertexCoords[vertexCoordIndex + 2] = v1.z;
-
-                  vertexCoordIndex += 3;
-               }
-            }
-            */ 
             final Vector transVector = position.getTranslation();
             // copy the translation vector into the uniform
             //https://docs.gl/gl4/glUniform
             gl.glUniform3d(transUniformID, transVector.x, transVector.y, transVector.z);
-         OpenGLChecker.CheckOpenGLError(gl); 
+            OpenGLChecker.CheckOpenGLError(gl); 
 
             // make a buffer from the coordinates
             DoubleBuffer vertBuffer = Buffers.newDirectDoubleBuffer(vertexCoords);
@@ -286,72 +198,10 @@ public final class PipelineGL
             // say that the vertex buffer is associated with attribute 0, layout = 0 
             //https://docs.gl/gl4/glVertexAttribPointer
             gl.glVertexAttribPointer(vertexAttribID, 4, GL4.GL_DOUBLE, false, 0, 0);
-
-         int[] transformFeedbackVBO = new int[1];
-         gl.glGenBuffers(transformFeedbackVBO.length, transformFeedbackVBO, 0);
-         gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, transformFeedbackVBO[0]);
-         gl.glBufferData(GL4.GL_ARRAY_BUFFER, vertBuffer.limit()*Buffers.SIZEOF_DOUBLE, null, GL4.GL_STATIC_READ);
-         
-         gl.glEnable(GL4.GL_RASTERIZER_DISCARD);
-         
-         gl.glBindBufferBase(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, transformFeedbackVBO[0]);
-         
-         gl.glBeginTransformFeedback(GL4.GL_LINES);
-
-         gl.glDrawElements(GL4.GL_LINES, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0);
-
-         gl.glEndTransformFeedback();
-
-         gl.glFlush();
-
-         float[] feedbackArr = new float[vertexCoords.length];
-         FloatBuffer feedback = Buffers.newDirectFloatBuffer(feedbackArr);
-         gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_DOUBLE, feedback);
-
-         for(int i = 0; i < feedback.limit(); i += 1)
-            System.out.println(String.format("%f", feedback.get(i)));
-         
-         for(int i = 0; i < feedback.limit(); i += 4)
-            System.out.println(feedback.get(i+0) + ", " + feedback.get(i+1) + 
-                               feedback.get(i+2) + ", " + feedback.get(i+3)); 
-
-         /*
-         DoubleBuffer vertBufferOut = Buffers.newDirectDoubleBuffer(vertBuffer.limit()* 4);
-         int[] transformedVertexVBOID = new int[1]; 
-         gl.glGenBuffers(1, transformedVertexVBOID, 0);
-         gl.glBindBuffer(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, transformedVertexVBOID[0]); 
-         gl.glBufferData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, vertBuffer.limit() * Buffers.SIZEOF_DOUBLE, vertBufferOut, GL4.GL_STATIC_COPY);
-         gl.glBindBufferBase(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 1, transformedVertexVBOID[0]); 
-
-         gl.glEnable(GL4.GL_RASTERIZER_DISCARD); // Disable rasterization
-      OpenGLChecker.CheckOpenGLError(gl); 
-         gl.glBeginTransformFeedback(GL4.GL_LINES);
-      OpenGLChecker.CheckOpenGLError(gl); 
       
-      System.out.println("Valid Program:              " + OpenGLChecker.isValidProgram(gl, gpuProgramID));
-      System.out.println("Vertex Data Buffer Bound:   " + OpenGLChecker.vertexArrayBufferBound(gl));
-      System.out.println("Vertex Index Buffer Bound:  " + OpenGLChecker.vertexIndexBufferBound(gl));
-      System.out.println("Vertex Output Buffer Bound: " + OpenGLChecker.vertexOutputBufferBound(gl));
-      System.out.println("Vertex Output Active:       " + OpenGLChecker.vertexOutputActive(gl)); 
+            performTransformFeedback(vertBuffer, indBuffer);
 
-            // draw the line primitives drawarrays doesn't use the element buffer
-            //https://docs.gl/gl4/glDrawArrays
-            //gl.glDrawArrays(GL4.GL_LINES, 0, vertexCoords.length);
-            //https://docs.gl/gl4/glDrawElements
             gl.glDrawElements(GL4.GL_LINES, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0);
-      OpenGLChecker.CheckOpenGLError(gl); 
-         gl.glEndTransformFeedback();
-      OpenGLChecker.CheckOpenGLError(gl); 
-      */ 
-         
-         gl.glDisable(GL4.GL_RASTERIZER_DISCARD);      
-      OpenGLChecker.CheckOpenGLError(gl); 
-      
-      gl.glDrawElements(GL4.GL_LINES, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0);
-
-         //for(int i = 0; i < vertBufferOut.limit(); i += 4)
-         //   System.out.println(vertBufferOut.get(i+0) + ", " + vertBufferOut.get(i+1) + ", " + vertBufferOut.get(i+2) + ", " + vertBufferOut.get(i+3));   
-
 
             // make the buffer to store the gl rendered data
             ByteBuffer pixelBuffer = GLBuffers.newDirectByteBuffer(vp.getWidthVP() * vp.getHeightVP() * 4);
@@ -372,13 +222,104 @@ public final class PipelineGL
                }
             }
          }
-
-         //Model2Camera.model2camera(position);
-            //Projection.project(model, scene.camera);
-            //Viewport.imagePlane2pixelPlane(model, vp);
-            //Rasterize.rasterize(model, vp);
       }
 
+      private static void createOpenGLFramebuffer(FrameBuffer.Viewport vp)
+      {
+         glProf = GLProfile.get("GL4");
+         glCap  = new GLCapabilities(glProf);
+
+         glCap.setPBuffer(true);              // enable the use of pbuffers
+         glCap.setDoubleBuffered(false);
+
+         glFact = GLDrawableFactory.getFactory(glProf);
+         glPixelBuffer = glFact.createOffscreenAutoDrawable(null, glCap, null, vp.getWidthVP(), vp.getHeightVP()); // create the pbuffer to be the vp width x vp height
+         glPixelBuffer.display();
+         glPixelBuffer.getContext().makeCurrent(); // make this pbuffer current
+
+         gl = glPixelBuffer.getGL().getGL4(); // get the gl object associated with the pbuffer
+
+         final Color vpBGColor = vp.bgColorVP;
+         // clear the pbuffer to be the background color
+         gl.glClearColor(vpBGColor.getRed(), vpBGColor.getGreen(), vpBGColor.getBlue(), vpBGColor.getAlpha());
+
+         gl.glClear(GL4.GL_COLOR_BUFFER_BIT | GL4.GL_DEPTH_BUFFER_BIT); // clear the color buffer and the depth buffer
+      }
+
+      private static int createOpenGLShaders()
+      {
+         // copy all the glsl code into one big array
+         System.arraycopy(vertexShaderSourceCode1,   0, vertexShaderSourceCode,    0,                            verCode1Size);
+         System.arraycopy(Model2Camera.model2Camera, 0, vertexShaderSourceCode, verCode1Size,                             mod2CamSize);
+         System.arraycopy(Projection.project,        0, vertexShaderSourceCode, verCode1Size + mod2CamSize,               projectSize);
+         System.arraycopy(vertexShaderSourceCode2,   0, vertexShaderSourceCode, verCode1Size + mod2CamSize + projectSize, verCode2Size);
+
+         System.out.println(Arrays.toString(vertexShaderSourceCode)); 
+
+         // create the vertex shader and get its id, set the source code, and compile it
+         // https://docs.gl/gl4/glCreateShader
+         //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47
+         final int vertexShaderID = gl.glCreateShader(GL4.GL_VERTEX_SHADER);
+
+         //https://docs.gl/gl4/glShaderSource     
+         //https://docs.gl/gl4/glCompileShader 
+         //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47
+         gl.glShaderSource(vertexShaderID, vertexShaderSourceCode.length, vertexShaderSourceCode, null);
+         gl.glCompileShader(vertexShaderID);
+
+         // create the fragment shader and get its id, set the source code, and compile it
+         final int fragmentShaderID = gl.glCreateShader(GL4.GL_FRAGMENT_SHADER);
+         gl.glShaderSource(fragmentShaderID, fragmentShaderSourceCode.length, fragmentShaderSourceCode, null);
+         gl.glCompileShader(fragmentShaderID);
+
+         // create the program and save its id, attach the compiled vertex and fragment shader, and link it all together
+         //https://docs.gl/gl4/glCreateProgram
+         //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47  
+         int gpuProgramID = gl.glCreateProgram();
+
+         //https://docs.gl/gl4/glAttachShader
+         gl.glAttachShader(gpuProgramID, vertexShaderID);
+         gl.glAttachShader(gpuProgramID, fragmentShaderID);
+         
+         //https://docs.gl/gl4/glTransformFeedbackVaryings
+         String[] vertexShaderOutputVariableName = {"transVertex"}; 
+         gl.glTransformFeedbackVaryings(gpuProgramID, vertexShaderOutputVariableName.length, 
+                                        vertexShaderOutputVariableName, GL4.GL_INTERLEAVED_ATTRIBS);
+
+         //https://docs.gl/gl4/glLinkProgram
+         //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47
+         gl.glLinkProgram(gpuProgramID);
+         gl.glUseProgram(gpuProgramID);
+      
+         return gpuProgramID;
+      }
+   
+      private static void performTransformFeedback(DoubleBuffer vertBuffer, IntBuffer indBuffer)
+      {
+         int[] transformFeedbackVBO = new int[1];
+         gl.glGenBuffers(transformFeedbackVBO.length, transformFeedbackVBO, 0);
+         gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, transformFeedbackVBO[0]);
+         gl.glBufferData(GL4.GL_ARRAY_BUFFER, vertBuffer.limit()*Buffers.SIZEOF_DOUBLE, null, GL4.GL_STATIC_READ);
+         gl.glEnable(GL4.GL_RASTERIZER_DISCARD);
+         gl.glBindBufferBase(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, transformFeedbackVBO[0]);
+         gl.glBeginTransformFeedback(GL4.GL_LINES);
+         gl.glDrawElements(GL4.GL_LINES, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0);
+         gl.glEndTransformFeedback();
+         gl.glFlush();
+
+         float[] feedbackArr = new float[vertBuffer.limit()];
+         FloatBuffer feedback = Buffers.newDirectFloatBuffer(feedbackArr);
+         gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_DOUBLE, feedback);
+         
+         /*
+         for(int i = 0; i < feedback.limit(); i += 4)
+            System.out.println(feedback.get(i+0) + ", " + feedback.get(i+1) + 
+                               feedback.get(i+2) + ", " + feedback.get(i+3));
+         */
+         gl.glDisable(GL4.GL_RASTERIZER_DISCARD);      
+      }
+   
+   
    // Private default constructor to enforce noninstantiable class.
    // See Item 4 in "Effective Java", 3rd Ed, Joshua Bloch.
    private PipelineGL() {
