@@ -41,12 +41,14 @@ public final class PipelineGL
       private static int vertexVBOID;    // the buffer id for the vertex info
       private static int indexVBOID;     // the buffer id for the index info 
       private static int vertexAttribID;
+      private static int transVertexAttribID;
       private static int transUniformID;     // the uniform id for the translation info
 
       private static final String[] vertexShaderSourceCode1 =
       {
          "#version 450 \n",
          "layout (location=0) in vec3 vertex; \n",
+         "varying vec4 transVertex; \n",
          "uniform vec3 translationVector; \n",
          "vec4 model2Camera(); \n", 
          "vec4 projection(); \n"
@@ -56,11 +58,12 @@ public final class PipelineGL
       {
          "void main(void) \n",
          "{ \n",
-         "vec3 tmp = vec3(translationVector + vertex);\n",
-         "gl_Position = vec4(tmp, 1);\n",
-         //"gl_Position = vec4(vertex, 1);\n",
-         //"gl_Position = model2Camera(); \n",
-         //"gl_Position = projection(); \n",
+         //"vec3 tmp = vec3(translationVector + vertex);\n",
+         //"gl_Position = vec4(tmp, 1);\n",
+         "transVertex = vec4(vertex, 1);\n",
+         "gl_Position = vec4(vertex, 1);\n",
+         //"vec4 mod2Cam = model2Camera(); \n",
+         //"gl_Position = projection(mod2Cam); \n",
          "} \n"
       };
 
@@ -158,10 +161,17 @@ public final class PipelineGL
          gl.glAttachShader(gpuProgramID, vertexShaderID);
          gl.glAttachShader(gpuProgramID, fragmentShaderID);
          
+      //https://docs.gl/gl4/glTransformFeedbackVaryings
+      String[] vertexShaderOutputVariableName = {"transVertex"}; 
+      gl.glTransformFeedbackVaryings(gpuProgramID, vertexShaderOutputVariableName.length, 
+                                     vertexShaderOutputVariableName, GL4.GL_INTERLEAVED_ATTRIBS);
+
          //https://docs.gl/gl4/glLinkProgram
          //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47
          gl.glLinkProgram(gpuProgramID);
          gl.glUseProgram(gpuProgramID);
+      System.out.println(OpenGLChecker.shaderCompiled(gl, vertexShaderID));
+      System.out.println(OpenGLChecker.shaderCompiled(gl, fragmentShaderID));
       OpenGLChecker.printProgramLog(gl, gpuProgramID);
 
          //https://docs.gl/gl4/glGenVertexArrays
@@ -175,16 +185,17 @@ public final class PipelineGL
          indexVBOID    = vbo[1]; 
 
          vertexAttribID = gl.glGetAttribLocation(gpuProgramID, "vertex"); 
+         transVertexAttribID = gl.glGetAttribLocation(gpuProgramID, "transVertex");
 
          //https://docs.gl/gl4/glGetUniformLocation
-         transUniformID = gl.glGetUniformLocation(gpuProgramID, "translationVector"); // find the id for the translation vector
+         //transUniformID = gl.glGetUniformLocation(gpuProgramID, "translationVector"); // find the id for the translation vector
 
          for(final Position position : scene.positionList)
          {
             final Model model = position.getModel();
             
             final int      numVertexes  = model.vertexList.size();
-            final double[] vertexCoords = new double[numVertexes * 3];
+            final double[] vertexCoords = new double[numVertexes * 4];
 
             // this will need to be fixed later on assuming every primitive is a line segment 
             final int   numPrimitives = model.primitiveList.size();
@@ -196,8 +207,9 @@ public final class PipelineGL
                vertexCoords[vertexCoordIndex + 0] = v.x; 
                vertexCoords[vertexCoordIndex + 1] = v.y; 
                vertexCoords[vertexCoordIndex + 2] = v.z; 
+               vertexCoords[vertexCoordIndex + 3] = 1; 
 
-               vertexCoordIndex += 3; 
+               vertexCoordIndex += 4; 
             }
 
             int vertexPrimIndex = 0; 
@@ -239,16 +251,11 @@ public final class PipelineGL
             final Vector transVector = position.getTranslation();
             // copy the translation vector into the uniform
             //https://docs.gl/gl4/glUniform
-            gl.glUniform3d(transUniformID, transVector.x, transVector.y, transVector.z);
+            //gl.glUniform4d(transUniformID, transVector.x, transVector.y, transVector.z, 1.0);
+         //OpenGLChecker.CheckOpenGLError(gl); 
 
             // make a buffer from the coordinates
             DoubleBuffer vertBuffer = Buffers.newDirectDoubleBuffer(vertexCoords);
-
-      //for(int i = 0; i < vertBuffer.limit(); i += 3)
-      //   System.out.println(vertBuffer.get(i+0) + ", " + vertBuffer.get(i+1) + ", " + vertBuffer.get(i+2)); 
-
-      //for(int i = 0; i < indBuffer.limit(); i += 2)
-      //   System.out.println(indBuffer.get(i+0) + ", " + indBuffer.get(i+1)); 
 
             // bind the vertex buffer id, make the vertex buffer active
             //https://docs.gl/gl4/glBindBuffer
@@ -300,8 +307,8 @@ public final class PipelineGL
          FloatBuffer feedback = Buffers.newDirectFloatBuffer(feedbackArr);
          gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_DOUBLE, feedback);
 
-         for(int i = 0; i < feedback.limit(); i += 4)
-            System.out.println(feedback.get(i+0) + ", " + feedback.get(i+1) + ", " + feedback.get(i+2) + ", " + feedback.get(i+3));
+         for(int i = 0; i < feedback.limit(); i += 1)
+            System.out.println(String.format("%f", feedback.get(i)));
          /*
          DoubleBuffer vertBufferOut = Buffers.newDirectDoubleBuffer(vertBuffer.limit()* 4);
          int[] transformedVertexVBOID = new int[1]; 
@@ -320,19 +327,23 @@ public final class PipelineGL
       System.out.println("Vertex Index Buffer Bound:  " + OpenGLChecker.vertexIndexBufferBound(gl));
       System.out.println("Vertex Output Buffer Bound: " + OpenGLChecker.vertexOutputBufferBound(gl));
       System.out.println("Vertex Output Active:       " + OpenGLChecker.vertexOutputActive(gl)); 
-<<<<<<< HEAD
-            */
-=======
 
->>>>>>> e57758aa44e58211a264d798a17c89733bbfd943
             // draw the line primitives drawarrays doesn't use the element buffer
             //https://docs.gl/gl4/glDrawArrays
             //gl.glDrawArrays(GL4.GL_LINES, 0, vertexCoords.length);
             //https://docs.gl/gl4/glDrawElements
             gl.glDrawElements(GL4.GL_LINES, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0);
+      OpenGLChecker.CheckOpenGLError(gl); 
+         gl.glEndTransformFeedback();
+      OpenGLChecker.CheckOpenGLError(gl); 
+      */ 
+         gl.glDisable(GL4.GL_RASTERIZER_DISCARD);      
+      OpenGLChecker.CheckOpenGLError(gl); 
+      
+      gl.glDrawElements(GL4.GL_LINES, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0);
 
-            //for(int i = 0; i < vertBufferOut.limit(); i += 4)
-            //   System.out.println(vertBufferOut.get(i+0) + ", " + vertBufferOut.get(i+1) + ", " + vertBufferOut.get(i+2) + ", " + vertBufferOut.get(i+3));   
+         //for(int i = 0; i < vertBufferOut.limit(); i += 4)
+         //   System.out.println(vertBufferOut.get(i+0) + ", " + vertBufferOut.get(i+1) + ", " + vertBufferOut.get(i+2) + ", " + vertBufferOut.get(i+3));   
 
 
             // make the buffer to store the gl rendered data
