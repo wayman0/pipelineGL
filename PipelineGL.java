@@ -61,7 +61,8 @@ public final class PipelineGL
          //"vec3 tmp = vec3(translationVector + vertex);\n",
          //"gl_Position = vec4(tmp, 1);\n",
          "transVertex = vec4(vertex, 1);\n",
-         "gl_Position = vec4(vertex, 1);\n",
+         "gl_Position = vec4(transVertex);\n",
+         //"gl_Position = vec4(vertex, 1);\n",
          //"vec4 mod2Cam = model2Camera(); \n",
          //"gl_Position = projection(mod2Cam); \n",
          "} \n"
@@ -188,7 +189,7 @@ public final class PipelineGL
          transVertexAttribID = gl.glGetAttribLocation(gpuProgramID, "transVertex");
 
          //https://docs.gl/gl4/glGetUniformLocation
-         //transUniformID = gl.glGetUniformLocation(gpuProgramID, "translationVector"); // find the id for the translation vector
+         transUniformID = gl.glGetUniformLocation(gpuProgramID, "translationVector"); // find the id for the translation vector
 
          for(final Position position : scene.positionList)
          {
@@ -251,8 +252,8 @@ public final class PipelineGL
             final Vector transVector = position.getTranslation();
             // copy the translation vector into the uniform
             //https://docs.gl/gl4/glUniform
-            //gl.glUniform4d(transUniformID, transVector.x, transVector.y, transVector.z, 1.0);
-         //OpenGLChecker.CheckOpenGLError(gl); 
+            gl.glUniform3d(transUniformID, transVector.x, transVector.y, transVector.z);
+         OpenGLChecker.CheckOpenGLError(gl); 
 
             // make a buffer from the coordinates
             DoubleBuffer vertBuffer = Buffers.newDirectDoubleBuffer(vertexCoords);
@@ -337,6 +338,7 @@ public final class PipelineGL
          gl.glEndTransformFeedback();
       OpenGLChecker.CheckOpenGLError(gl); 
       */ 
+         
          gl.glDisable(GL4.GL_RASTERIZER_DISCARD);      
       OpenGLChecker.CheckOpenGLError(gl); 
       
