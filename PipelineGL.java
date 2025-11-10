@@ -41,13 +41,13 @@ public final class PipelineGL
       private static int vertexVBOID;    // the buffer id for the vertex info
       private static int indexVBOID;     // the buffer id for the index info 
       private static int vertexAttribID;
-      private static int transVertexAttribID;
       private static int transUniformID;     // the uniform id for the translation info
 
       private static final String[] vertexShaderSourceCode1 =
       {
          "#version 450 \n",
-         "layout (location=0) in vec3 vertex; \n",
+         //"layout (location=0) in vec3 vertex; \n",
+         "layout (location=0) in vec4 vertex;\n",
          "varying vec4 transVertex; \n",
          "uniform vec3 translationVector; \n",
          "vec4 model2Camera(); \n", 
@@ -60,8 +60,16 @@ public final class PipelineGL
          "{ \n",
          //"vec3 tmp = vec3(translationVector + vertex);\n",
          //"gl_Position = vec4(tmp, 1);\n",
-         "transVertex = vec4(vertex, 1);\n",
-         "gl_Position = vec4(vertex, 1);\n",
+         //"transVertex = vec4(vertex, 1);\n",
+         "transVertex.x = vertex.x;\n", 
+         "transVertex.y = vertex.y;\n", 
+         "transVertex.z = vertex.z;\n", 
+         "transVertex.w = vertex.w;\n",
+         //"gl_Position = vec4(vertex, 1);\n",
+         //"gl_Position.x = vertex.x;\n", 
+         //"gl_Position.y = vertex.y;\n", 
+         //"gl_Position.z = vertex.z;\n", 
+         //"gl_Position.w = vertex.w;\n",
          //"vec4 mod2Cam = model2Camera(); \n",
          //"gl_Position = projection(mod2Cam); \n",
          "} \n"
@@ -170,8 +178,6 @@ public final class PipelineGL
          //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47
          gl.glLinkProgram(gpuProgramID);
          gl.glUseProgram(gpuProgramID);
-      System.out.println(OpenGLChecker.shaderCompiled(gl, vertexShaderID));
-      System.out.println(OpenGLChecker.shaderCompiled(gl, fragmentShaderID));
       OpenGLChecker.printProgramLog(gl, gpuProgramID);
 
          //https://docs.gl/gl4/glGenVertexArrays
@@ -185,10 +191,9 @@ public final class PipelineGL
          indexVBOID    = vbo[1]; 
 
          vertexAttribID = gl.glGetAttribLocation(gpuProgramID, "vertex"); 
-         transVertexAttribID = gl.glGetAttribLocation(gpuProgramID, "transVertex");
 
          //https://docs.gl/gl4/glGetUniformLocation
-         //transUniformID = gl.glGetUniformLocation(gpuProgramID, "translationVector"); // find the id for the translation vector
+         transUniformID = gl.glGetUniformLocation(gpuProgramID, "translationVector"); // find the id for the translation vector
 
          for(final Position position : scene.positionList)
          {
@@ -251,8 +256,8 @@ public final class PipelineGL
             final Vector transVector = position.getTranslation();
             // copy the translation vector into the uniform
             //https://docs.gl/gl4/glUniform
-            //gl.glUniform4d(transUniformID, transVector.x, transVector.y, transVector.z, 1.0);
-         //OpenGLChecker.CheckOpenGLError(gl); 
+            gl.glUniform3d(transUniformID, transVector.x, transVector.y, transVector.z);
+         OpenGLChecker.CheckOpenGLError(gl); 
 
             // make a buffer from the coordinates
             DoubleBuffer vertBuffer = Buffers.newDirectDoubleBuffer(vertexCoords);
@@ -307,9 +312,13 @@ public final class PipelineGL
          FloatBuffer feedback = Buffers.newDirectFloatBuffer(feedbackArr);
          gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_DOUBLE, feedback);
 
-         for(int i = 0; i < feedback.limit(); i += 1)
-            System.out.println(String.format("%f", feedback.get(i)));
-         /*
+         for(int i = 0; i < vertBuffer.limit(); i += 4)
+            System.out.println(vertBuffer.get(i + 0) + ", " + vertBuffer.get(i+1) + ", " + vertBuffer.get(i+2) + ", " + vertBuffer.get(i+3));
+         System.out.println("_________________________________________________________");
+         for(int i = 0; i < feedback.limit(); i += 4)
+            System.out.println(feedback.get(i + 0) + ", " + feedback.get(i+1) + ", " + feedback.get(i+2)+ ", " + feedback.get(i+3));
+         
+            /*
          DoubleBuffer vertBufferOut = Buffers.newDirectDoubleBuffer(vertBuffer.limit()* 4);
          int[] transformedVertexVBOID = new int[1]; 
          gl.glGenBuffers(1, transformedVertexVBOID, 0);
