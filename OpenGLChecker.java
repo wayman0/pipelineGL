@@ -51,7 +51,7 @@ public class OpenGLChecker
         int[] chWrittn = new int[1]; 
         byte[] logMsg; 
 
-        gl.glGetShaderiv(programID, GL4.GL_INFO_LOG_LENGTH, logSize, 0); 
+        gl.glGetProgramiv(programID, GL4.GL_INFO_LOG_LENGTH, logSize, 0); 
         if(logSize[0] > 0)
         {
             logMsg = new byte[logSize[0]]; 
@@ -98,6 +98,48 @@ public class OpenGLChecker
         return numActives[0]; 
     }
     
+    public static int isValidProgram(GL4 gl, int programID)
+    {
+        gl.glValidateProgram(programID);
+        int[] isValid = new int[1]; 
+
+        gl.glGetProgramiv(programID, GL4.GL_VALIDATE_STATUS, isValid, 0); 
+
+        return isValid[0];       
+    }
+
+    public static int vertexArrayBufferBound(GL4 gl)
+    {
+        int[] isBound = new int[1]; 
+        gl.glGetVertexAttribiv(0, GL4.GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING, isBound, 0);
+
+        return isBound[0]; 
+    }
+
+    public static int vertexIndexBufferBound(GL4 gl)
+    {
+        int[] isBound = new int[1]; 
+        gl.glGetIntegerv(GL4.GL_ELEMENT_ARRAY_BUFFER_BINDING, isBound, 0);
+
+        return isBound[0]; 
+    }
+
+    public static int vertexOutputBufferBound(GL4 gl)
+    {
+        int[] isBound = new int[1]; 
+        gl.glGetIntegerv(GL4.GL_TRANSFORM_FEEDBACK_BUFFER_BINDING, isBound, 0);
+
+        return isBound[0]; 
+    }
+
+    public static int vertexOutputActive(GL4 gl)
+    {
+        int[] isBound = new int[1];
+        gl.glGetIntegerv(GL4.GL_TRANSFORM_FEEDBACK_ACTIVE, isBound, 0);
+
+        return isBound[0]; 
+    }
+
     // Private default constructor to enforce noninstantiable class.
     // See Item 4 in "Effective Java", 3rd Ed, Joshua Bloch.
     private OpenGLChecker() 
