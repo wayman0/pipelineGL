@@ -320,7 +320,11 @@ public final class PipelineGL
       System.out.println("Vertex Index Buffer Bound:  " + OpenGLChecker.vertexIndexBufferBound(gl));
       System.out.println("Vertex Output Buffer Bound: " + OpenGLChecker.vertexOutputBufferBound(gl));
       System.out.println("Vertex Output Active:       " + OpenGLChecker.vertexOutputActive(gl)); 
+<<<<<<< HEAD
             */
+=======
+
+>>>>>>> e57758aa44e58211a264d798a17c89733bbfd943
             // draw the line primitives drawarrays doesn't use the element buffer
             //https://docs.gl/gl4/glDrawArrays
             //gl.glDrawArrays(GL4.GL_LINES, 0, vertexCoords.length);
