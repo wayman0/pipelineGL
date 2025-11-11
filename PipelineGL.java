@@ -43,6 +43,7 @@ public final class PipelineGL
       private static int vertexAttribID;
       private static int transVertexAttribID;
       private static int transUniformID;     // the uniform id for the translation info
+      private static final int numCoordsPerPoint = 4; 
 
       private static final String[] vertexShaderSourceCode1 =
       {
@@ -132,7 +133,7 @@ public final class PipelineGL
             final Model model = position.getModel();
             
             final int      numVertexes  = model.vertexList.size();
-            final double[] vertexCoords = new double[numVertexes * 4];
+            final double[] vertexCoords = new double[numVertexes * numCoordsPerPoint];
 
             // this will need to be fixed later on assuming every primitive is a line segment 
             final int   numPrimitives = model.primitiveList.size();
@@ -146,7 +147,7 @@ public final class PipelineGL
                vertexCoords[vertexCoordIndex + 2] = v.z; 
                vertexCoords[vertexCoordIndex + 3] = 1; 
 
-               vertexCoordIndex += 4; 
+               vertexCoordIndex += numCoordsPerPoint; 
             }
 
             int vertexPrimIndex = 0; 
@@ -197,7 +198,7 @@ public final class PipelineGL
 
             // say that the vertex buffer is associated with attribute 0, layout = 0 
             //https://docs.gl/gl4/glVertexAttribPointer
-            gl.glVertexAttribPointer(vertexAttribID, 4, GL4.GL_DOUBLE, false, 0, 0);
+            gl.glVertexAttribPointer(vertexAttribID, numCoordsPerPoint, GL4.GL_DOUBLE, false, 0, 0);
       
             performTransformFeedback(vertBuffer, indBuffer);
 
@@ -309,14 +310,14 @@ public final class PipelineGL
          gl.glEndTransformFeedback();
          gl.glFlush();
 
-         //double[] feedbackArr = new double[vertBuffer.limit() * 2];
+         //                              number of points   * how many lines there are
+         //double[] feedbackArr = new double[vertBuffer.limit()/4 * indBuffer.limit()/2];
          //DoubleBuffer feedback = Buffers.newDirectDoubleBuffer(feedbackArr);
          //gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_DOUBLE, feedback);
          
-         //                              number of points   * how many lines there are
-         float[] feedbackArr = new float[vertBuffer.limit()/4 * indBuffer.limit()/2]; 
-         FloatBuffer feedback = Buffers.newDirectFloatBuffer(feedbackArr); 
-         gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_FLOAT, feedback);
+         //float[] feedbackArr = new float[vertBuffer.limit()/4 * indBuffer.limit()/2]; 
+         //FloatBuffer feedback = Buffers.newDirectFloatBuffer(feedbackArr); 
+         //gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_FLOAT, feedback);
 
          gl.glDisable(GL4.GL_RASTERIZER_DISCARD);  
          
