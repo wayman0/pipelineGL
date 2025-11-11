@@ -43,7 +43,7 @@ public final class PipelineGL
       private static int vertexAttribID;
       private static int transVertexAttribID;
       private static int transUniformID;     // the uniform id for the translation info
-      private static final int numCoordsPerPoint = 4; 
+      private static final int numCoordsPerPoint = 3;//4; 
 
       private static final String[] vertexShaderSourceCode1 =
       {
@@ -61,7 +61,7 @@ public final class PipelineGL
          "{ \n",
          //"vec3 tmp = vec3(translationVector + vertex);\n",
          //"gl_Position = vec4(tmp, 1);\n",
-         "transVertex = vec4(vertex, 1);\n",
+         "transVertex = vec4(vertex + translationVector, 1);\n",
          "gl_Position = vec4(transVertex);\n",
          //"gl_Position = vec4(vertex, 1);\n",
          //"vec4 mod2Cam = model2Camera(); \n",
@@ -123,8 +123,11 @@ public final class PipelineGL
          indexVBOID    = vbo[1]; 
 
          vertexAttribID = gl.glGetAttribLocation(gpuProgramID, "vertex"); 
-         transVertexAttribID = gl.glGetAttribLocation(gpuProgramID, "transVertex");
+         OpenGLChecker.CheckOpenGLError(gl);
 
+         transVertexAttribID = gl.glGetAttribLocation(gpuProgramID, "transVertex");
+         OpenGLChecker.CheckOpenGLError(gl);
+         
          //https://docs.gl/gl4/glGetUniformLocation
          transUniformID = gl.glGetUniformLocation(gpuProgramID, "translationVector"); // find the id for the translation vector
 
@@ -145,7 +148,7 @@ public final class PipelineGL
                vertexCoords[vertexCoordIndex + 0] = v.x; 
                vertexCoords[vertexCoordIndex + 1] = v.y; 
                vertexCoords[vertexCoordIndex + 2] = v.z; 
-               vertexCoords[vertexCoordIndex + 3] = 1; 
+               //vertexCoords[vertexCoordIndex + 3] = 1; 
 
                vertexCoordIndex += numCoordsPerPoint; 
             }
