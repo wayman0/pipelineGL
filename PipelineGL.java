@@ -210,6 +210,8 @@ public final class PipelineGL
             //https://docs.gl/gl4/glReadPixels
             gl.glReadPixels(0, 0, vp.getWidthVP(), vp.getHeightVP(), GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, pixelBuffer);
 
+            OpenGLChecker.CheckOpenGLError(gl); 
+
             // create an int view of the pixel buffer for use with the viewport
             final IntBuffer pixelIntBuffer = pixelBuffer.asIntBuffer();
 
@@ -307,16 +309,21 @@ public final class PipelineGL
          gl.glEndTransformFeedback();
          gl.glFlush();
 
-         float[] feedbackArr = new float[vertBuffer.limit()];
-         FloatBuffer feedback = Buffers.newDirectFloatBuffer(feedbackArr);
-         gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_DOUBLE, feedback);
+         //double[] feedbackArr = new double[vertBuffer.limit() * 2];
+         //DoubleBuffer feedback = Buffers.newDirectDoubleBuffer(feedbackArr);
+         //gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_DOUBLE, feedback);
          
-         /*
+         //                              number of points   * how many lines there are
+         float[] feedbackArr = new float[vertBuffer.limit()/4 * indBuffer.limit()/2]; 
+         FloatBuffer feedback = Buffers.newDirectFloatBuffer(feedbackArr); 
+         gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_FLOAT, feedback);
+
+         gl.glDisable(GL4.GL_RASTERIZER_DISCARD);  
+         
          for(int i = 0; i < feedback.limit(); i += 4)
-            System.out.println(feedback.get(i+0) + ", " + feedback.get(i+1) + 
+            System.out.println(feedback.get(i+0) + ", " + feedback.get(i+1) + ", " +
                                feedback.get(i+2) + ", " + feedback.get(i+3));
-         */
-         gl.glDisable(GL4.GL_RASTERIZER_DISCARD);      
+         
       }
    
    
