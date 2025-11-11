@@ -315,9 +315,9 @@ public final class PipelineGL
          //DoubleBuffer feedback = Buffers.newDirectDoubleBuffer(feedbackArr);
          //gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_DOUBLE, feedback);
          
-         //float[] feedbackArr = new float[vertBuffer.limit()/4 * indBuffer.limit()/2]; 
-         //FloatBuffer feedback = Buffers.newDirectFloatBuffer(feedbackArr); 
-         //gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_FLOAT, feedback);
+         float[] feedbackArr = new float[vertBuffer.limit()/4 * indBuffer.limit()/2]; 
+         FloatBuffer feedback = Buffers.newDirectFloatBuffer(feedbackArr); 
+         gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_FLOAT, feedback);
 
          gl.glDisable(GL4.GL_RASTERIZER_DISCARD);  
          
