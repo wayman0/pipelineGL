@@ -62,6 +62,7 @@ public final class PipelineGL
          "vec3 tmp = vec3(translationVector + vertex);\n",
          "gl_Position = vec4(tmp, 1);\n",
          "transVertex = model2Camera();\n",
+         //"transVertex = projection();\n",
          //"transVertex = vec4(vertex + translationVector, 1);\n",
          //"transVertex.x = transVertex.x + translationVector.x;\n", 
          //"transVertex.y = transVertex.y + translationVector.y;\n", 
@@ -129,7 +130,8 @@ public final class PipelineGL
          vertexAttribID = gl.glGetAttribLocation(gpuProgramID, "vertex"); 
          OpenGLChecker.CheckOpenGLError(gl);
 
-         transVertexAttribID = gl.glGetAttribLocation(gpuProgramID, "transVertex");
+         //transVertexAttribID = gl.glGetAttribLocation(gpuProgramID, "transVertex");
+         transVertexAttribID = gl.glGetAttribLocation(gpuProgramID, "gl_Position");
          OpenGLChecker.CheckOpenGLError(gl);
          
          //https://docs.gl/gl4/glGetUniformLocation
@@ -292,10 +294,11 @@ public final class PipelineGL
          gl.glAttachShader(gpuProgramID, fragmentShaderID);
          
          //https://docs.gl/gl4/glTransformFeedbackVaryings
-         String[] vertexShaderOutputVariableName = {"transVertex"}; 
+         String[] vertexShaderOutputVariableName = //{"transVertex"};
+                                                   {"gl_Position"}; 
          gl.glTransformFeedbackVaryings(gpuProgramID, vertexShaderOutputVariableName.length, 
                                         vertexShaderOutputVariableName, GL4.GL_INTERLEAVED_ATTRIBS);
-
+         OpenGLChecker.CheckOpenGLError(gl);
          //https://docs.gl/gl4/glLinkProgram
          //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_9_1_eng_web.html#47
          gl.glLinkProgram(gpuProgramID);
