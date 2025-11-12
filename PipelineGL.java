@@ -240,9 +240,12 @@ public final class PipelineGL
                //https://docs.gl/gl4/glVertexAttribPointer
                gl.glVertexAttribPointer(vertexAttribID, numCoordsPerPoint, GL4.GL_DOUBLE, false, 0, 0);
    
+               Point aPoint = (Point)model.primitiveList.get(pointIndexes[0]);
+               float pointSize = aPoint.radius; 
+               gl.glPointSize(pointSize);
                gl.glDrawElements(GL4.GL_POINTS, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0); 
             }
-            
+
             // make the buffer to store the gl rendered data
             ByteBuffer pixelBuffer = GLBuffers.newDirectByteBuffer(vp.getWidthVP() * vp.getHeightVP() * 4);
 
