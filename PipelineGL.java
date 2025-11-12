@@ -212,7 +212,7 @@ public final class PipelineGL
                //https://docs.gl/gl4/glVertexAttribPointer
                gl.glVertexAttribPointer(vertexAttribID, numCoordsPerPoint, GL4.GL_DOUBLE, false, 0, 0);
 
-               performTransformFeedback(vertBuffer, indBuffer, GL4.GL_LINES); 
+               //performTransformFeedback(vertBuffer, indBuffer, GL4.GL_LINES); 
 
                gl.glDrawElements(GL4.GL_LINES, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0);
             }
@@ -244,7 +244,7 @@ public final class PipelineGL
                float pointSize = aPoint.radius; 
                gl.glPointSize(pointSize);
 
-               performTransformFeedback(vertBuffer, indBuffer, GL4.GL_POINTS); 
+               //performTransformFeedback(vertBuffer, indBuffer, GL4.GL_POINTS); 
 
                gl.glDrawElements(GL4.GL_POINTS, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0); 
             }
@@ -289,9 +289,11 @@ public final class PipelineGL
 
          final Color vpBGColor = vp.bgColorVP;
          // clear the pbuffer to be the background color
-         gl.glClearColor(vpBGColor.getRed(), vpBGColor.getGreen(), vpBGColor.getBlue(), vpBGColor.getAlpha());
-
-         gl.glClear(GL4.GL_COLOR_BUFFER_BIT | GL4.GL_DEPTH_BUFFER_BIT); // clear the color buffer and the depth buffer
+         if(vp.hasBeenCleared)
+         {
+            gl.glClearColor(vpBGColor.getRed(), vpBGColor.getGreen(), vpBGColor.getBlue(), vpBGColor.getAlpha());
+            gl.glClear(GL4.GL_COLOR_BUFFER_BIT | GL4.GL_DEPTH_BUFFER_BIT); // clear the color buffer and the depth buffer
+         }
       }
 
       private static int createOpenGLShaders()
