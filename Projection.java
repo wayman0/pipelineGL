@@ -88,10 +88,10 @@ public final class Projection
       //https://stackoverflow.com/questions/31686664/perspective-divide-why-use-the-w-component
       //https://stackoverflow.com/questions/17269686/why-do-we-need-perspective-division
       //https://stackoverflow.com/questions/49782148/whats-the-fourth-dimension-in-a-glsl-gl-position
-      "vec4 project(vec4 vert) \n", 
+      "vec4 project() \n", 
       "{ \n",
-      "double z = translationVector.z;\n",
-      "\treturn vec4(vert.xyz/-z, 1); \n",  
+      "double z = gl_Position.z;\n",
+      "\treturn vec4(gl_Position.x/-z, gl_Position.y/-z, gl_Position.z/-z, 1); \n",  
       "} \n"
    };
 

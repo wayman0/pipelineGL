@@ -49,7 +49,7 @@ public final class PipelineGL
       {
          "#version 450 \n",
          "layout (location=0) in vec3 vertex; \n",
-         "varying vec4 transVertex; \n",
+         //"varying vec4 transVertex; \n",
          "uniform vec3 translationVector; \n",
          "vec4 model2Camera(); \n", 
          "vec4 projection(); \n"
@@ -59,9 +59,11 @@ public final class PipelineGL
       {
          "void main(void) \n",
          "{ \n",
-         "vec3 tmp = vec3(translationVector + vertex);\n",
-         "gl_Position = vec4(tmp, 1);\n",
-         "transVertex = model2Camera();\n",
+         //"vec3 tmp = vec3(translationVector + vertex);\n",
+         //"gl_Position = vec4(tmp, 1);\n",
+         "gl_Position = model2Camera();\n",
+         "gl_Position = project();\n",
+         //"transVertex = model2Camera();\n",
          //"transVertex = projection();\n",
          //"transVertex = vec4(vertex + translationVector, 1);\n",
          //"transVertex.x = transVertex.x + translationVector.x;\n", 
