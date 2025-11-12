@@ -59,10 +59,13 @@ public final class PipelineGL
       {
          "void main(void) \n",
          "{ \n",
-         //"vec3 tmp = vec3(translationVector + vertex);\n",
-         //"gl_Position = vec4(tmp, 1);\n",
-         "transVertex = vec4(vertex + translationVector, 1);\n",
-         "gl_Position = vec4(transVertex);\n",
+         "vec3 tmp = vec3(translationVector + vertex);\n",
+         "gl_Position = vec4(tmp, 1);\n",
+         "transVertex = vec4(vertex, 1);\n",
+         "transVertex.x = transVertex.x/2;", 
+         "transVertex.y = transVertex.y/2;", 
+         "transVertex.z = transVertex.z/2;", 
+         //"gl_Position = vec4(transVertex);\n",
          //"gl_Position = vec4(vertex, 1);\n",
          //"vec4 mod2Cam = model2Camera(); \n",
          //"gl_Position = projection(mod2Cam); \n",
@@ -136,7 +139,7 @@ public final class PipelineGL
             final Model model = position.getModel();
             
             final int      numVertexes  = model.vertexList.size();
-            final double[] vertexCoords = new double[numVertexes * numCoordsPerPoint];
+            final float[] vertexCoords = new float[numVertexes * numCoordsPerPoint];
 
             // this will need to be fixed later on assuming every primitive is a line segment 
             final int   numPrimitives = model.primitiveList.size();
@@ -145,9 +148,9 @@ public final class PipelineGL
             int vertexCoordIndex = 0;
             for(final Vertex v : model.vertexList)
             {
-               vertexCoords[vertexCoordIndex + 0] = v.x; 
-               vertexCoords[vertexCoordIndex + 1] = v.y; 
-               vertexCoords[vertexCoordIndex + 2] = v.z; 
+               vertexCoords[vertexCoordIndex + 0] = (float)v.x; 
+               vertexCoords[vertexCoordIndex + 1] = (float)v.y; 
+               vertexCoords[vertexCoordIndex + 2] = (float)v.z; 
                //vertexCoords[vertexCoordIndex + 3] = 1; 
 
                vertexCoordIndex += numCoordsPerPoint; 
@@ -168,11 +171,11 @@ public final class PipelineGL
             final Vector transVector = position.getTranslation();
             // copy the translation vector into the uniform
             //https://docs.gl/gl4/glUniform
-            gl.glUniform3d(transUniformID, transVector.x, transVector.y, transVector.z);
+            gl.glUniform3f(transUniformID, (float)transVector.x, (float)transVector.y, (float)transVector.z);
             OpenGLChecker.CheckOpenGLError(gl); 
 
             // make a buffer from the coordinates
-            DoubleBuffer vertBuffer = Buffers.newDirectDoubleBuffer(vertexCoords);
+            FloatBuffer vertBuffer = Buffers.newDirectFloatBuffer(vertexCoords);
 
             // bind the vertex buffer id, make the vertex buffer active
             //https://docs.gl/gl4/glBindBuffer
@@ -180,7 +183,7 @@ public final class PipelineGL
 
             // copy the vertex buffer data
             //https://docs.gl/gl4/glBufferData
-            gl.glBufferData(GL4.GL_ARRAY_BUFFER, vertBuffer.limit() * Buffers.SIZEOF_DOUBLE, vertBuffer, GL4.GL_STATIC_DRAW);
+            gl.glBufferData(GL4.GL_ARRAY_BUFFER, vertBuffer.limit() * Buffers.SIZEOF_FLOAT, vertBuffer, GL4.GL_STATIC_DRAW);
 
             // make a buffer from the indexes 
             IntBuffer    indBuffer  = Buffers.newDirectIntBuffer(vertexIndexes);
@@ -201,7 +204,7 @@ public final class PipelineGL
 
             // say that the vertex buffer is associated with attribute 0, layout = 0 
             //https://docs.gl/gl4/glVertexAttribPointer
-            gl.glVertexAttribPointer(vertexAttribID, numCoordsPerPoint, GL4.GL_DOUBLE, false, 0, 0);
+            gl.glVertexAttribPointer(vertexAttribID, numCoordsPerPoint, GL4.GL_FLOAT, false, 0, 0);
       
             performTransformFeedback(vertBuffer, indBuffer);
 
@@ -300,12 +303,12 @@ public final class PipelineGL
          return gpuProgramID;
       }
    
-      private static void performTransformFeedback(DoubleBuffer vertBuffer, IntBuffer indBuffer)
+      private static void performTransformFeedback(FloatBuffer vertBuffer, IntBuffer indBuffer)
       {
          int[] transformFeedbackVBO = new int[1];
          gl.glGenBuffers(transformFeedbackVBO.length, transformFeedbackVBO, 0);
          gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, transformFeedbackVBO[0]);
-         gl.glBufferData(GL4.GL_ARRAY_BUFFER, vertBuffer.limit()*Buffers.SIZEOF_DOUBLE, null, GL4.GL_STATIC_READ);
+         gl.glBufferData(GL4.GL_ARRAY_BUFFER, vertBuffer.limit()*Buffers.SIZEOF_FLOAT, null, GL4.GL_STATIC_READ);
          gl.glEnable(GL4.GL_RASTERIZER_DISCARD);
          gl.glBindBufferBase(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, transformFeedbackVBO[0]);
          gl.glBeginTransformFeedback(GL4.GL_LINES);
@@ -321,7 +324,7 @@ public final class PipelineGL
          float[] feedbackArr = new float[vertBuffer.limit()/numCoordsPerPoint * indBuffer.limit()/2]; 
          FloatBuffer feedback = Buffers.newDirectFloatBuffer(feedbackArr); 
          gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_FLOAT, feedback);
-
+         OpenGLChecker.CheckOpenGLError(gl); 
          gl.glDisable(GL4.GL_RASTERIZER_DISCARD);  
          
          for(int i = 0; i < feedback.limit(); i += 4)
