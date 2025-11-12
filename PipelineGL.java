@@ -189,8 +189,6 @@ public final class PipelineGL
             //https://docs.gl/gl4/glBufferData
             gl.glBufferData(GL4.GL_ARRAY_BUFFER, vertBuffer.limit() * Buffers.SIZEOF_DOUBLE, vertBuffer, GL4.GL_STATIC_DRAW);
       
-            //performTransformFeedback(vertBuffer, indBuffer);
-
             if(numLines > 0)
             {
                // make a buffer from the indexes 
@@ -213,6 +211,8 @@ public final class PipelineGL
                // say that the vertex buffer is associated with attribute 0, layout = 0 
                //https://docs.gl/gl4/glVertexAttribPointer
                gl.glVertexAttribPointer(vertexAttribID, numCoordsPerPoint, GL4.GL_DOUBLE, false, 0, 0);
+
+               performTransformFeedback(vertBuffer, indBuffer, GL4.GL_LINES); 
 
                gl.glDrawElements(GL4.GL_LINES, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0);
             }
@@ -243,6 +243,9 @@ public final class PipelineGL
                Point aPoint = (Point)model.primitiveList.get(pointIndexes[0]);
                float pointSize = aPoint.radius; 
                gl.glPointSize(pointSize);
+
+               performTransformFeedback(vertBuffer, indBuffer, GL4.GL_POINTS); 
+
                gl.glDrawElements(GL4.GL_POINTS, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0); 
             }
 
@@ -340,12 +343,12 @@ public final class PipelineGL
          return gpuProgramID;
       }
    
-      private static void performTransformFeedback(DoubleBuffer vertBuffer, IntBuffer indBuffer)
+      private static void performTransformFeedback(DoubleBuffer vertBuffer, IntBuffer indBuffer, int glPrimType)
       {
-         performTransformFeedback(vertBuffer, indBuffer, false);
+         performTransformFeedback(vertBuffer, indBuffer, glPrimType, true);
       }
 
-      private static void performTransformFeedback(DoubleBuffer vertBuffer, IntBuffer indBuffer, boolean print)
+      private static void performTransformFeedback(DoubleBuffer vertBuffer, IntBuffer indBuffer, int glPrimType, boolean print)
       {
          int[] transformFeedbackVBO = new int[1];
          gl.glGenBuffers(transformFeedbackVBO.length, transformFeedbackVBO, 0);
@@ -353,7 +356,7 @@ public final class PipelineGL
          gl.glBufferData(GL4.GL_ARRAY_BUFFER, vertBuffer.limit()*Buffers.SIZEOF_DOUBLE, null, GL4.GL_STATIC_READ);
          gl.glEnable(GL4.GL_RASTERIZER_DISCARD);
          gl.glBindBufferBase(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, transformFeedbackVBO[0]);
-         gl.glBeginTransformFeedback(GL4.GL_LINES);
+         gl.glBeginTransformFeedback(glPrimType);
          gl.glDrawElements(GL4.GL_LINES, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0);
          gl.glEndTransformFeedback();
          gl.glFlush();
@@ -363,7 +366,14 @@ public final class PipelineGL
          //DoubleBuffer feedback = Buffers.newDirectDoubleBuffer(feedbackArr);
          //gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_DOUBLE, feedback);
          
-         float[] feedbackArr = new float[vertBuffer.limit()/numCoordsPerPoint * indBuffer.limit()/2]; 
+         // need to figure this out! the math makes sense to me but the output is way to large! 
+         //                                                        number of points               * coordsPerGLPoint * size of the primitive 
+         int feedbackArrSize = (glPrimType == GL4.GL_LINES ? vertBuffer.limit()/numCoordsPerPoint * 4                * indBuffer.limit()/2 : 
+                                                             vertBuffer.limit()/numCoordsPerPoint * 4                * indBuffer.limit()); 
+
+         //System.out.println(vertBuffer.limit() + " " + indBuffer.limit() + " " + feedbackArrSize);
+
+         float[] feedbackArr = new float[feedbackArrSize]; 
          FloatBuffer feedback = Buffers.newDirectFloatBuffer(feedbackArr); 
          gl.glGetBufferSubData(GL4.GL_TRANSFORM_FEEDBACK_BUFFER, 0, feedback.limit() * Buffers.SIZEOF_FLOAT, feedback);
          OpenGLChecker.CheckOpenGLError(gl); 
