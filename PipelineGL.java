@@ -41,7 +41,6 @@ public final class PipelineGL
       private static int vertexVBOID;    // the buffer id for the vertex info
       private static int indexVBOID;     // the buffer id for the index info 
       private static int vertexAttribID;
-      private static int transVertexAttribID;
       private static int transUniformID;     // the uniform id for the translation info
       private static final int numCoordsPerPoint = 3;//4; 
 
@@ -49,7 +48,6 @@ public final class PipelineGL
       {
          "#version 450 \n",
          "layout (location=0) in vec3 vertex; \n",
-         //"varying vec4 transVertex; \n",
          "uniform vec3 translationVector; \n",
          "vec4 model2Camera(); \n", 
          "vec4 projection(); \n"
@@ -59,20 +57,8 @@ public final class PipelineGL
       {
          "void main(void) \n",
          "{ \n",
-         //"vec3 tmp = vec3(translationVector + vertex);\n",
-         //"gl_Position = vec4(tmp, 1);\n",
          "gl_Position = model2Camera();\n",
          "gl_Position = project();\n",
-         //"transVertex = model2Camera();\n",
-         //"transVertex = projection();\n",
-         //"transVertex = vec4(vertex + translationVector, 1);\n",
-         //"transVertex.x = transVertex.x + translationVector.x;\n", 
-         //"transVertex.y = transVertex.y + translationVector.y;\n", 
-         //"transVertex.z = transVertex.z + translationVector.z;\n", 
-         //"gl_Position = vec4(transVertex);\n",
-         //"gl_Position = vec4(vertex, 1);\n",
-         //"vec4 mod2Cam = model2Camera(); \n",
-         //"gl_Position = projection(mod2Cam); \n",
          "} \n"
       };
 
@@ -130,12 +116,7 @@ public final class PipelineGL
          indexVBOID    = vbo[1]; 
 
          vertexAttribID = gl.glGetAttribLocation(gpuProgramID, "vertex"); 
-         OpenGLChecker.CheckOpenGLError(gl);
 
-         //transVertexAttribID = gl.glGetAttribLocation(gpuProgramID, "transVertex");
-         transVertexAttribID = gl.glGetAttribLocation(gpuProgramID, "gl_Position");
-         OpenGLChecker.CheckOpenGLError(gl);
-         
          //https://docs.gl/gl4/glGetUniformLocation
          transUniformID = gl.glGetUniformLocation(gpuProgramID, "translationVector"); // find the id for the translation vector
 
@@ -156,7 +137,6 @@ public final class PipelineGL
                vertexCoords[vertexCoordIndex + 0] = v.x; 
                vertexCoords[vertexCoordIndex + 1] = v.y; 
                vertexCoords[vertexCoordIndex + 2] = v.z; 
-               //vertexCoords[vertexCoordIndex + 3] = 1; 
 
                vertexCoordIndex += numCoordsPerPoint; 
             }
@@ -311,6 +291,11 @@ public final class PipelineGL
    
       private static void performTransformFeedback(DoubleBuffer vertBuffer, IntBuffer indBuffer)
       {
+         performTransformFeedback(vertBuffer, indBuffer, false);
+      }
+
+      private static void performTransformFeedback(DoubleBuffer vertBuffer, IntBuffer indBuffer, boolean print)
+      {
          int[] transformFeedbackVBO = new int[1];
          gl.glGenBuffers(transformFeedbackVBO.length, transformFeedbackVBO, 0);
          gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, transformFeedbackVBO[0]);
@@ -333,10 +318,12 @@ public final class PipelineGL
          OpenGLChecker.CheckOpenGLError(gl); 
          gl.glDisable(GL4.GL_RASTERIZER_DISCARD);  
          
-         for(int i = 0; i < feedback.limit(); i += 4)
-            System.out.println(feedback.get(i+0) + ", " + feedback.get(i+1) + ", " +
-                               feedback.get(i+2) + ", " + feedback.get(i+3));
-         
+         if(print)
+         {   
+            for(int i = 0; i < feedback.limit(); i += 4)
+               System.out.println(feedback.get(i+0) + ", " + feedback.get(i+1) + ", " +
+                                  feedback.get(i+2) + ", " + feedback.get(i+3));
+         }
       }
    
    
