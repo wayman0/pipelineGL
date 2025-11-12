@@ -131,6 +131,7 @@ public final class PipelineGL
             final int   numPrimitives = model.primitiveList.size();
             final int[] vertexIndexes = new int[numPrimitives * 2]; 
 
+            // openGL seems to flip the x and y axis 
             int vertexCoordIndex = 0;
             for(final Vertex v : model.vertexList)
             {
