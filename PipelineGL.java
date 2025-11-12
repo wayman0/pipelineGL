@@ -128,8 +128,20 @@ public final class PipelineGL
             final double[] vertexCoords = new double[numVertexes * numCoordsPerPoint];
 
             // this will need to be fixed later on assuming every primitive is a line segment 
-            final int   numPrimitives = model.primitiveList.size();
-            final int[] vertexIndexes = new int[numPrimitives * 2]; 
+            //final int   numPrimitives = model.primitiveList.size();
+            int numPoints = 0; 
+            int numLines  = 0; 
+            for(final Primitive p : model.primitiveList)
+            {
+               if(p instanceof Point)
+                  numPoints += 1; 
+               else if(p instanceof LineSegment)
+                  numLines += 1; 
+            }
+
+            //final int[] vertexIndexes = new int[numPrimitives * 2]; 
+            final int[] lineIndexes = new int[numLines * 2]; 
+            final int[] pointIndexes = new int[numPoints * 2]; 
 
             // openGL seems to flip the x and y axis 
             int vertexCoordIndex = 0;
@@ -142,15 +154,21 @@ public final class PipelineGL
                vertexCoordIndex += numCoordsPerPoint; 
             }
 
-            int vertexPrimIndex = 0; 
+            int lineIndex  = 0; 
+            int pointIndex = 0; 
             for(final Primitive p : model.primitiveList)
             {
-               if(p instanceof LineSegment)
+               if(p instanceof Point)
                {
-                  vertexIndexes[vertexPrimIndex + 0] = p.vIndexList.get(0); 
-                  vertexIndexes[vertexPrimIndex + 1] = p.vIndexList.get(1);
+                  pointIndexes[pointIndex] = p.vIndexList.get(0); 
+                  pointIndex += 1; 
+               }
+               else if(p instanceof LineSegment)
+               {
+                  lineIndexes[lineIndex + 0] = p.vIndexList.get(0); 
+                  lineIndexes[lineIndex + 1] = p.vIndexList.get(1);
                   
-                  vertexPrimIndex += 2; 
+                  lineIndex += 2; 
                }
             }
 
@@ -170,32 +188,61 @@ public final class PipelineGL
             // copy the vertex buffer data
             //https://docs.gl/gl4/glBufferData
             gl.glBufferData(GL4.GL_ARRAY_BUFFER, vertBuffer.limit() * Buffers.SIZEOF_DOUBLE, vertBuffer, GL4.GL_STATIC_DRAW);
-
-            // make a buffer from the indexes 
-            IntBuffer    indBuffer  = Buffers.newDirectIntBuffer(vertexIndexes);
-
-            // bind the index buffer id, make the index buffer active
-            //https://docs.gl/gl4/glBindBuffer
-            //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_8_1_eng_web.html#13
-            gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, indexVBOID);
-
-            // copy the index buffer data
-            //https://docs.gl/gl4/glBufferData
-            //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_8_1_eng_web.html#13
-            gl.glBufferData(GL4.GL_ELEMENT_ARRAY_BUFFER, indBuffer.limit() * Buffers.SIZEOF_INT, indBuffer, GL4.GL_STATIC_DRAW);
-
-            // make the vertex variable in the vertex shader active
-            //https://docs.gl/gl4/glEnableVertexAttribArray
-            gl.glEnableVertexAttribArray(vertexAttribID);
-
-            // say that the vertex buffer is associated with attribute 0, layout = 0 
-            //https://docs.gl/gl4/glVertexAttribPointer
-            gl.glVertexAttribPointer(vertexAttribID, numCoordsPerPoint, GL4.GL_DOUBLE, false, 0, 0);
       
-            performTransformFeedback(vertBuffer, indBuffer);
+            //performTransformFeedback(vertBuffer, indBuffer);
 
-            gl.glDrawElements(GL4.GL_LINES, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0);
+            if(numLines > 0)
+            {
+               // make a buffer from the indexes 
+               IntBuffer    indBuffer  = Buffers.newDirectIntBuffer(lineIndexes);
 
+               // bind the index buffer id, make the index buffer active
+               //https://docs.gl/gl4/glBindBuffer
+               //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_8_1_eng_web.html#13
+               gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, indexVBOID);
+
+               // copy the index buffer data
+               //https://docs.gl/gl4/glBufferData
+               //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_8_1_eng_web.html#13
+               gl.glBufferData(GL4.GL_ELEMENT_ARRAY_BUFFER, indBuffer.limit() * Buffers.SIZEOF_INT, indBuffer, GL4.GL_STATIC_DRAW);
+
+               // make the vertex variable in the vertex shader active
+               //https://docs.gl/gl4/glEnableVertexAttribArray
+               gl.glEnableVertexAttribArray(vertexAttribID);
+
+               // say that the vertex buffer is associated with attribute 0, layout = 0 
+               //https://docs.gl/gl4/glVertexAttribPointer
+               gl.glVertexAttribPointer(vertexAttribID, numCoordsPerPoint, GL4.GL_DOUBLE, false, 0, 0);
+
+               gl.glDrawElements(GL4.GL_LINES, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0);
+            }
+
+            if(numPoints > 0)
+            {
+               // make a buffer from the indexes 
+               IntBuffer    indBuffer  = Buffers.newDirectIntBuffer(pointIndexes);
+
+               // bind the index buffer id, make the index buffer active
+               //https://docs.gl/gl4/glBindBuffer
+               //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_8_1_eng_web.html#13
+               gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, indexVBOID);
+
+               // copy the index buffer data
+               //https://docs.gl/gl4/glBufferData
+               //https://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/graphics_8_1_eng_web.html#13
+               gl.glBufferData(GL4.GL_ELEMENT_ARRAY_BUFFER, indBuffer.limit() * Buffers.SIZEOF_INT, indBuffer, GL4.GL_STATIC_DRAW);
+
+               // make the vertex variable in the vertex shader active
+               //https://docs.gl/gl4/glEnableVertexAttribArray
+               gl.glEnableVertexAttribArray(vertexAttribID);
+
+               // say that the vertex buffer is associated with attribute 0, layout = 0 
+               //https://docs.gl/gl4/glVertexAttribPointer
+               gl.glVertexAttribPointer(vertexAttribID, numCoordsPerPoint, GL4.GL_DOUBLE, false, 0, 0);
+   
+               gl.glDrawElements(GL4.GL_POINTS, indBuffer.limit(), GL4.GL_UNSIGNED_INT, 0); 
+            }
+            
             // make the buffer to store the gl rendered data
             ByteBuffer pixelBuffer = GLBuffers.newDirectByteBuffer(vp.getWidthVP() * vp.getHeightVP() * 4);
 
