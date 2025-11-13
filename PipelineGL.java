@@ -36,12 +36,13 @@ public final class PipelineGL
       private static GLDrawableFactory       glFact;         // used to create the pbuffer for offscreen rendering
       private static GLOffscreenAutoDrawable glPixelBuffer;  // the pbuffer for offscreen rendering
 
-      private static int[] vao = new int[1]; // the main buffer id that all vertex info gets bound to
-      private static int[] vbo = new int[2]; // the buffer id's for the vertex attributes ie data and indexes 
-      private static int vertexVBOID;    // the buffer id for the vertex info
-      private static int indexVBOID;     // the buffer id for the index info 
-      private static int vertexAttribID;
-      private static int transUniformID;     // the uniform id for the translation info
+      private static       int gpuProgramID; 
+      private static final int[] vao = new int[1]; // the main buffer id that all vertex info gets bound to
+      private static final int[] vbo = new int[2]; // the buffer id's for the vertex attributes ie data and indexes 
+      private static       int vertexVBOID;    // the buffer id for the vertex info
+      private static       int indexVBOID;     // the buffer id for the index info 
+      private static       int vertexAttribID;
+      private static       int transUniformID;     // the uniform id for the translation info
       private static final int numCoordsPerPoint = 3;//4; 
 
       private static final String[] vertexShaderSourceCode1 =
@@ -101,10 +102,21 @@ public final class PipelineGL
       */
       public static void render(final Scene scene, final FrameBuffer.Viewport vp)
       {
-         createOpenGLFramebuffer(vp);
 
-         int gpuProgramID = createOpenGLShaders();
-         
+         if(gl == null)
+         {   
+            createOpenGLFramebuffer(vp);
+            gpuProgramID = createOpenGLShaders();
+         }
+         else
+         {
+            if(vp.hasBeenCleared)
+            {
+               gl.glClear(GL4.GL_COLOR_BUFFER_BIT | GL4.GL_DEPTH_BUFFER_BIT);
+               gl.glClearColor(vp.bgColorVP.getRed(), vp.bgColorVP.getGreen(), vp.bgColorVP.getBlue(), vp.bgColorVP.getAlpha());
+            }
+         }
+
          //https://docs.gl/gl4/glGenVertexArrays
          //https://docs.gl/gl4/glBindVertexArray
          gl.glGenVertexArrays(vao.length, vao, 0); // generate the id for the vao and store it at index 0
@@ -288,6 +300,7 @@ public final class PipelineGL
          gl = glPixelBuffer.getGL().getGL4(); // get the gl object associated with the pbuffer
 
          final Color vpBGColor = vp.bgColorVP;
+
          // clear the pbuffer to be the background color
          if(vp.hasBeenCleared)
          {
